@@ -124,6 +124,71 @@ turndownService.addRule('wechatCodeBlock', {
   }
 });
 
+// Convert ordinary HTML tables to GFM pipe tables.
+// Registered before preserveComplexTables so marked complex tables keep raw HTML.
+turndownService.addRule('gfmTables', {
+  filter: function (node) {
+    return node.nodeName === 'TABLE';
+  },
+  replacement: function (content, node) {
+    const rows = Array.from(node.rows || []);
+    if (!rows.length) return '';
+
+    const tableCells = rows.map(function (row) {
+      return Array.from(row.cells || []);
+    });
+    if (!tableCells.some(function (cells) { return cells.length > 0; })) return '';
+
+    // Merged cells cannot be expressed in GFM; leave them as raw HTML.
+    const hasMergedCells = tableCells.some(function (cells) {
+      return cells.some(function (cell) {
+        return cell.hasAttribute &&
+          (cell.hasAttribute('colspan') || cell.hasAttribute('rowspan'));
+      });
+    });
+    if (hasMergedCells) {
+      return '\n\n' + node.outerHTML + '\n\n';
+    }
+
+    const colCount = Math.max.apply(null, tableCells.map(function (cells) {
+      return cells.length;
+    }));
+    if (colCount === 0) return '';
+
+    function cellText(cell) {
+      if (!cell) return '';
+      let text = turndownService.turndown(cell.innerHTML || '').trim();
+      text = text.replace(/\r/g, '').replace(/\s*\n+\s*/g, '<br>');
+      text = text.replace(/\|/g, '\\|');
+      return text;
+    }
+
+    function formatRow(cells) {
+      const parts = [];
+      for (let i = 0; i < colCount; i++) {
+        parts.push(cellText(cells[i]));
+      }
+      return '| ' + parts.join(' | ') + ' |';
+    }
+
+    // GFM needs a header row. Prefer an existing TH row; otherwise promote the first row.
+    let headerIndex = tableCells.findIndex(function (cells) {
+      return cells.some(function (cell) { return cell.nodeName === 'TH'; });
+    });
+    if (headerIndex < 0) headerIndex = 0;
+
+    // GFM left alignment is ':---' (not '---:', which means right alignment).
+    const alignRow = '| ' + Array(colCount).fill(':---').join(' | ') + ' |';
+
+    const lines = [formatRow(tableCells[headerIndex]), alignRow];
+    tableCells.forEach(function (cells, index) {
+      if (index !== headerIndex) lines.push(formatRow(cells));
+    });
+
+    return '\n\n' + lines.join('\n') + '\n\n';
+  }
+});
+
 // Preserve complex tables as raw HTML
 turndownService.addRule('preserveComplexTables', {
   filter: function (node) {
