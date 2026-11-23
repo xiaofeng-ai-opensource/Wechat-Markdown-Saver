@@ -2,98 +2,36 @@
 // Chrome MV3 service workers lose FileSystemDirectoryHandle permissions
 // after restart. This offscreen document stays alive and holds the handle
 // in a proper DOM context where permissions survive.
+//
+// This document only QUERIES permission and writes files. It never calls
+// requestPermission() (no user gesture here) and never touches
+// chrome.storage.local (restricted in offscreen contexts). When permission
+// is not 'granted' it returns a structured code so a UI page can re-authorize.
 
-const DB_NAME = 'wechat-md-saver';
-const DB_VERSION = 1;
-const STORE_NAME = 'handles';
+const F = globalThis.__WMS_FOLDER__;
 
 let _dirHandle = null;
 let _keepAliveTimer = null;
-let _db = null;
 
-// ── IndexedDB ──────────────────────────────────────────────────────────
-
-function openDB() {
-  return new Promise((resolve, reject) => {
-    if (_db) return resolve(_db);
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => { req.result.createObjectStore(STORE_NAME); };
-    req.onsuccess = () => { _db = req.result; resolve(_db); };
-    req.onerror = () => reject(req.error);
-  });
-}
-
+// Read the stored handle without checking or requesting permission.
 async function loadDirectoryHandle() {
   if (_dirHandle) return _dirHandle;
-  try {
-    const db = await openDB();
-    const handle = await new Promise((resolve) => {
-      const tx = db.transaction(STORE_NAME, 'readonly');
-      const req = tx.objectStore(STORE_NAME).get('dirHandle');
-      req.onsuccess = () => resolve(req.result || null);
-      req.onerror = () => resolve(null);
-    });
-    if (handle) {
-      // Verify permission in this page context
-      const perm = await verifyPermission(handle);
-      if (perm === 'granted') {
-        _dirHandle = handle;
-        return handle;
-      } else if (perm === 'prompt') {
-        // Try to re-request — this works in a page context even without
-        // a user gesture if the origin has a prior grant on file.
-        try {
-          const newPerm = await handle.requestPermission({ mode: 'readwrite' });
-          if (newPerm === 'granted') {
-            _dirHandle = handle;
-            return handle;
-          }
-        } catch (e) { /* NotAllowedError — needs user gesture */ }
-      }
-      // Permission denied or prompt failed — handle is stale
-      console.warn('Offscreen: stored handle has no write permission (state=' + perm + ')');
-    }
-  } catch (e) {
-    console.error('Offscreen: failed to load handle from IndexedDB:', e);
-  }
-  return null;
+  const handle = await F.readHandle();
+  if (handle) _dirHandle = handle;
+  return handle;
 }
 
 async function verifyPermission(handle) {
-  try {
-    const perm = await handle.queryPermission({ mode: 'readwrite' });
-    return perm;
-  } catch (e) {
-    // queryPermission threw — likely not supported in this context
-    // Fall back to a write test
-    return await verifyHandleUsable(handle);
-  }
+  return F.queryPermission(handle);
 }
 
-async function verifyHandleUsable(dirHandle) {
-  try {
-    const testName = '.wms_test_' + Date.now().toString(36);
-    const testFile = await dirHandle.getFileHandle(testName, { create: true });
-    const writable = await testFile.createWritable();
-    await writable.write(new Uint8Array([1]));
-    await writable.close();
-    await dirHandle.removeEntry(testName);
-    return 'granted';
-  } catch (e) {
-    return 'denied';
-  }
-}
-
-// Reload handle from IndexedDB (called when options page updates it)
+// Reload handle from IndexedDB (called when options page updates it).
+// The folder name comes from the handle itself, not from storage.
 async function reloadHandle() {
   _dirHandle = null;
-  _db = null; // Force reconnect in case the connection is stale
   const handle = await loadDirectoryHandle();
-  const stored = await chrome.storage.local.get(['folderName', 'folderSet']);
-  if (handle && stored.folderSet) {
-    return { usable: true, name: stored.folderName || handle.name };
-  }
-  return { usable: false, name: stored.folderName || null };
+  if (handle) return { usable: true, name: handle.name };
+  return { usable: false, name: null };
 }
 
 // ── Image Downloader ───────────────────────────────────────────────────
@@ -212,8 +150,8 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         sendResponse({ usable: false, name: null, reason: 'not_found' });
         return;
       }
-      const stored = await chrome.storage.local.get(['folderName']);
-      sendResponse({ usable: true, name: stored.folderName || handle.name });
+      const perm = await verifyPermission(handle);
+      sendResponse({ usable: perm === 'granted', name: handle.name, permission: perm });
     })();
     return true;
   }
@@ -230,41 +168,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 async function handleWriteArticle(payload, sender) {
-  // Ensure we have a usable handle
-  let dirHandle = await loadDirectoryHandle();
-
+  // No handle configured at all.
+  const dirHandle = await loadDirectoryHandle();
   if (!dirHandle) {
-    chrome.storage.local.remove(['folderName', 'folderSet']);
-    return { success: false, code: 'NO_FOLDER', message: 'No writable folder set' };
+    return { success: false, code: 'NO_HANDLE', message: 'No folder configured' };
   }
 
-  // Verify handle is usable
+  // Permission must be granted here. requestPermission() cannot be called in
+  // this context (no user gesture) — return a code so a UI page can fix it.
+  // The display marker is NEVER cleared on failure (config survives errors).
   const perm = await verifyPermission(dirHandle);
   if (perm !== 'granted') {
-    // Try to re-request permission
-    if (perm === 'prompt') {
-      try {
-        const newPerm = await dirHandle.requestPermission({ mode: 'readwrite' });
-        if (newPerm !== 'granted') {
-          chrome.storage.local.remove(['folderName', 'folderSet']);
-          return { success: false, code: 'PERMISSION_DENIED', message: 'Folder permission denied' };
-        }
-        // Re-store the handle after permission refresh
-        const db = await openDB();
-        await new Promise((resolve, reject) => {
-          const tx = db.transaction(STORE_NAME, 'readwrite');
-          tx.objectStore(STORE_NAME).put(dirHandle, 'dirHandle');
-          tx.oncomplete = () => resolve();
-          tx.onerror = () => reject(tx.error);
-        });
-      } catch (e) {
-        chrome.storage.local.remove(['folderName', 'folderSet']);
-        return { success: false, code: 'PERMISSION_DENIED', message: 'Folder permission denied — please re-select folder in Settings' };
-      }
-    } else {
-      chrome.storage.local.remove(['folderName', 'folderSet']);
-      return { success: false, code: 'PERMISSION_DENIED', message: 'Folder access denied' };
-    }
+    const code = perm === 'denied' ? 'PERMISSION_DENIED' : 'PERMISSION_EXPIRED';
+    return { success: false, code, message: 'Folder write permission not granted (' + perm + ')' };
   }
 
   const sendProgress = (msgKey, args) => {
@@ -279,23 +195,6 @@ async function handleWriteArticle(payload, sender) {
     return { success: true, ...result };
   } catch (e) {
     console.error('Offscreen: write failed:', e);
-
-    // Retry once after reloading handle
-    _dirHandle = null;
-    const reloaded = await loadDirectoryHandle();
-    if (reloaded) {
-      try {
-        const retryPerm = await verifyPermission(reloaded);
-        if (retryPerm === 'granted') {
-          const result = await writeArticle(reloaded, payload, sendProgress);
-          return { success: true, ...result };
-        }
-      } catch (e2) {
-        console.error('Offscreen: retry also failed:', e2);
-      }
-    }
-
-    chrome.storage.local.remove(['folderName', 'folderSet']);
     return { success: false, code: 'WRITE_FAILED', message: e.message || 'Failed to write files' };
   }
 }
@@ -305,12 +204,12 @@ async function handleWritePdf(payload) {
   const dirHandle = await loadDirectoryHandle();
 
   if (!dirHandle) {
-    return { success: false, code: 'NO_FOLDER', message: 'No writable folder set' };
+    return { success: false, code: 'NO_HANDLE', message: 'No folder configured' };
   }
 
   const perm = await verifyPermission(dirHandle);
   if (perm !== 'granted') {
-    return { success: false, code: 'PERMISSION_DENIED' };
+    return { success: false, code: perm === 'denied' ? 'PERMISSION_DENIED' : 'PERMISSION_EXPIRED' };
   }
 
   try {
@@ -345,11 +244,10 @@ function startKeepAlive() {
 // ── Init ───────────────────────────────────────────────────────────────
 
 (async () => {
-  // Load handle on startup
+  // Load handle on startup; name comes from the handle itself.
   const handle = await loadDirectoryHandle();
   if (handle) {
-    const stored = await chrome.storage.local.get(['folderName']);
-    console.log('Offscreen: loaded handle for folder:', stored.folderName || handle.name);
+    console.log('Offscreen: loaded handle for folder:', handle.name);
   } else {
     console.log('Offscreen: no folder handle available');
   }

@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
   "name": "__MSG_appName__",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "__MSG_appDescription__",
   "default_locale": "en",
-  "permissions": ["activeTab", "downloads", "storage", "unlimitedStorage", "debugger"],
+  "permissions": ["activeTab", "downloads", "storage", "unlimitedStorage", "debugger", "offscreen"],
   "host_permissions": ["*://mp.weixin.qq.com/*", "*://mmbiz.qpic.cn/*", "*://mmbiz.qlogo.cn/*"],
   "commands": {
     "save-to-folder": {
