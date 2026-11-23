@@ -28,6 +28,7 @@
       <div class="folder-row">
         <span id="folder-path" class="folder-path" data-i18n="optionsFolderNotSelected">Not selected</span>
         <button id="pick-folder-btn" data-i18n="optionsChooseFolderBtn">Choose Folder</button>
+        <button id="reauth-folder-btn" class="btn-secondary" data-i18n="optionsReauthorizeBtn" hidden>Re-authorize</button>
         <button id="clear-folder-btn" class="btn-secondary" data-i18n="optionsClearBtn">Clear</button>
       </div>
       <p class="hint" id="folder-hint" data-i18n="optionsFolderHint">Tip: pick a folder inside Dropbox / OneDrive / iCloud to sync articles across devices.</p>
@@ -92,6 +93,7 @@
   </div>
   <script src="../shared/browser.js"></script>
   <script src="../shared/i18n.js"></script>
+  <script src="../shared/folder-permission.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

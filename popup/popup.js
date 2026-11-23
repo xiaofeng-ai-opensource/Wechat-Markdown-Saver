@@ -14,6 +14,13 @@ const changeFolderLink = document.getElementById('change-folder-link');
 
 let port = null;
 
+// v2.3.0: handle is pre-read at popup open so the click handler can
+// request permission in the same user gesture (async DB reads after the
+// click would consume the gesture). See shared/folder-permission.js.
+let cachedHandle = null;
+let folderState = 'unconfigured'; // unconfigured | needs_auth | ready
+let folderName = null;
+
 // Apply i18n and placeholders once ready
 onI18nReady(() => {
   applyI18n();
@@ -64,6 +71,14 @@ function setState(state, data) {
       resultDiv.className = 'result visible error';
       resultDiv.innerHTML = '<span class="result-icon">&#10007;</span> ' + data;
       break;
+    case 'degraded':
+      // A write failed; a zip was downloaded instead. Never show "Done!".
+      statusText.textContent = t('popupDegraded');
+      statusText.classList.add('error');
+      resultDiv.className = 'result visible degraded';
+      resultDiv.innerHTML = '<span class="result-icon">&#9888;</span> ' + data
+        + '<button class="result-action" data-result-action="1">' + t('popupResultAction') + '</button>';
+      break;
     case 'not-article':
       statusText.textContent = t('popupNotArticle');
       statusText.classList.add('error');
@@ -85,7 +100,40 @@ function triggerAction(actionType) {
     handlePdf();
     return;
   }
-  // SAVE
+  // SAVE — re-authorize in this click if needed (real user gesture), then
+  // proceed with the normal background write. The folder is never re-picked.
+  startSave(null);
+}
+
+// Ensure write permission before a folder write. Uses the handle pre-read
+// at popup open, so the requestPermission() call stays inside the click's
+// user gesture. Returns true when safe to write, false when we must stop.
+async function ensureWritePermission() {
+  if (!cachedHandle) return true; // no folder configured: let backend degrade to zip
+  const perm = await __WMS_FOLDER__.queryPermission(cachedHandle);
+  if (perm === 'granted') return true;
+  if (perm === 'denied') {
+    folderState = 'needs_auth';
+    renderFolderStatus();
+    setState('error', t('popupAuthDeniedHint'));
+    return false;
+  }
+  // 'prompt' or 'error': ask once, inside this click gesture.
+  const result = await __WMS_FOLDER__.requestPermission(cachedHandle);
+  if (result === 'granted') {
+    folderState = 'ready';
+    renderFolderStatus();
+    return true;
+  }
+  folderState = 'needs_auth';
+  renderFolderStatus();
+  setState('error', t('popupAuthFailedHint'));
+  return false;
+}
+
+async function startSave(tabId) {
+  if (folderState !== 'unconfigured' && !(await ensureWritePermission())) return;
+
   setState('working', t('popupSaveToFolder'));
   port = chrome.runtime.connect({ name: 'save-article' });
   port.onMessage.addListener((msg) => {
@@ -98,13 +146,52 @@ function triggerAction(actionType) {
       port.disconnect();
     }
     if (msg.error) { setState('error', msg.error); port.disconnect(); }
+    // v2.3.0: folder write failed -> one combined degraded result (reason +
+    // next action + the zip that was downloaded instead). Never "done".
+    if (msg.degraded) {
+      pendingDegraded = msg;
+      const details = t('popupNotWritten', [msg.reason, msg.next])
+        + ' ' + t('popupZipDowngraded', [msg.filename, String(msg.imageCount)]);
+      setState('degraded', details);
+      port.disconnect();
+    }
   });
   port.onDisconnect.addListener(() => {
     if (saveBtn.disabled && !resultDiv.className.includes('visible')) {
       setState('error', t('popupConnectionLost'));
     }
   });
-  port.postMessage({ action: 'SAVE_ARTICLE' });
+  port.postMessage(tabId ? { action: 'SAVE_ARTICLE', tabId } : { action: 'SAVE_ARTICLE' });
+}
+
+// Holds the last degraded result so the result-area action button can react.
+let pendingDegraded = null;
+
+function handleDegradedAction() {
+  const code = pendingDegraded && pendingDegraded.code;
+  const reauthorizable = ['PERMISSION_EXPIRED', 'PERMISSION_DENIED'].includes(code);
+  (async () => {
+    if (reauthorizable && cachedHandle) {
+      // D11=③: re-authorize only when permission failed, in this click.
+      const result = await __WMS_FOLDER__.requestPermission(cachedHandle);
+      if (result === 'granted') {
+        folderState = 'ready';
+        renderFolderStatus();
+        pendingDegraded = null;
+        startSave(null);
+      } else {
+        chrome.runtime.openOptionsPage();
+      }
+      return;
+    }
+    if (code === 'NO_HANDLE') {
+      chrome.runtime.openOptionsPage();
+      return;
+    }
+    // WRITE_FAILED / COMMUNICATION_ERROR / OFFSCREEN_UNAVAILABLE: retry (D12=①).
+    pendingDegraded = null;
+    startSave(null);
+  })();
 }
 
 async function handleCopy() {
@@ -195,19 +282,32 @@ urlSaveBtn.addEventListener('click', async () => {
       setState('error', extractResult?.error || 'Extraction failed'); return;
     }
 
+    // Reuse the same save path (incl. pre-auth and degraded handling).
+    // The tab is extracted in the background via tabId; close it on any
+    // terminal message so the temporary tab never leaks.
     port = chrome.runtime.connect({ name: 'save-article' });
     port.onMessage.addListener(async (msg) => {
       if (msg.status) setState('working', msg.status);
+      if (msg.done || msg.error || msg.degraded) {
+        try { await chrome.tabs.remove(tab.id); } catch (e) {}
+      }
       if (msg.done) {
         const details = msg.imageErrors
           ? t('popupSavedWithErrors', [msg.filename, String(msg.imageCount), String(msg.imageErrors)])
           : t('popupSaved', [msg.filename, String(msg.imageCount)]);
         setState('success', details);
         port.disconnect();
-        try { await chrome.tabs.remove(tab.id); } catch (e) {}
         urlInput.value = ''; urlSaveBtn.disabled = true;
       }
-      if (msg.error) { setState('error', msg.error); port.disconnect(); try { await chrome.tabs.remove(tab.id); } catch (e) {} }
+      if (msg.error) { setState('error', msg.error); port.disconnect(); }
+      if (msg.degraded) {
+        pendingDegraded = msg;
+        const details = t('popupNotWritten', [msg.reason, msg.next])
+          + ' ' + t('popupZipDowngraded', [msg.filename, String(msg.imageCount)]);
+        setState('degraded', details);
+        port.disconnect();
+        urlInput.value = ''; urlSaveBtn.disabled = true;
+      }
     });
     port.onDisconnect.addListener(async () => {
       if (urlSaveBtn.disabled && !resultDiv.className.includes('visible')) {
@@ -215,6 +315,12 @@ urlSaveBtn.addEventListener('click', async () => {
         try { await chrome.tabs.remove(tab.id); } catch (e) {}
       }
     });
+    // Pre-authorize in this click using the cached handle, same as the
+    // current-page save path.
+    if (folderState !== 'unconfigured' && !(await ensureWritePermission())) {
+      try { await chrome.tabs.remove(tab.id); } catch (e) {}
+      return;
+    }
     port.postMessage({ action: 'SAVE_ARTICLE', tabId: tab.id });
   } catch (err) {
     setState('error', err.message || 'Failed to save URL');
@@ -226,16 +332,38 @@ urlSaveBtn.addEventListener('click', async () => {
 changeFolderLink.addEventListener('click', (e) => { e.preventDefault(); chrome.runtime.openOptionsPage(); });
 settingsLink.addEventListener('click', (e) => { e.preventDefault(); chrome.runtime.openOptionsPage(); });
 
-// --- Init ---
+// Result-area action button (retry / re-authorize / open settings).
+// Bound once via delegation so it survives innerHTML updates in setState().
+resultDiv.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-result-action]');
+  if (btn) handleDegradedAction();
+});
 
-onI18nReady(async () => {
-  const stored = await chrome.storage.local.get(['folderName', 'folderSet']);
-  if (stored.folderSet && stored.folderName) {
-    folderNameEl.textContent = stored.folderName;
+// --- Folder status (three states) ---
+
+function renderFolderStatus() {
+  folderNameEl.className = '';
+  if (folderState === 'ready') {
+    folderNameEl.textContent = folderName || t('popupFolderNoSet');
     folderNameEl.classList.add('set');
+  } else if (folderState === 'needs_auth') {
+    folderNameEl.textContent = (folderName || t('popupFolderNoSet')) + ' · ' + t('popupFolderNeedsAuth');
+    folderNameEl.classList.add('needs-auth');
   } else {
     folderNameEl.textContent = t('popupFolderNoSet');
   }
+}
+
+// --- Init ---
+
+onI18nReady(async () => {
+  // D7: heal an old wrongly-cleared marker before rendering state.
+  await __WMS_FOLDER__.restoreMark();
+  const state = await __WMS_FOLDER__.getFolderState();
+  cachedHandle = state.handle;
+  folderName = state.name;
+  folderState = state.state;
+  renderFolderStatus();
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab || !tab.url || !tab.url.includes('mp.weixin.qq.com/s/')) {

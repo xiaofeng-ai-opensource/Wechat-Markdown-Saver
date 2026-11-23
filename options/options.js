@@ -1,37 +1,26 @@
 // options.js — Settings page: folder, mode, structure, language
 
-const DB_NAME = 'wechat-md-saver';
-const DB_VERSION = 1;
-const STORE_NAME = 'handles';
+const F = globalThis.__WMS_FOLDER__;
 
-let db = null;
+// DB handles are owned by the shared module now; options.js keeps a local
+// connection only for the write performed when the user picks a folder.
 
 onI18nReady(() => { applyI18n(); });
 
 // --- IndexedDB ---
 
-function openDB() {
-  return new Promise((resolve, reject) => {
-    if (db) return resolve(db);
-    const req = indexedDB.open(DB_NAME, DB_VERSION);
-    req.onupgradeneeded = () => { req.result.createObjectStore(STORE_NAME); };
-    req.onsuccess = () => { db = req.result; resolve(db); };
-    req.onerror = () => reject(req.error);
-  });
-}
-
 async function storeDirectoryHandle(handle) {
-  await chrome.storage.local.set({ folderName: handle.name, folderSet: true });
-  const database = await openDB();
+  const db = await F.openDB();
   await new Promise((resolve, reject) => {
-    const tx = database.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).put(handle, 'dirHandle');
+    const tx = db.transaction('handles', 'readwrite');
+    tx.objectStore('handles').put(handle, 'dirHandle');
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
-  // Verify the handle was actually stored by reading it back
-  const verify = await loadDirectoryHandle();
-  if (!verify) {
+  // Write the display marker only after the real handle is persisted.
+  await chrome.storage.local.set({ folderName: handle.name, folderSet: true });
+  // Verify by reading back through the shared module.
+  if (!(await F.readHandle())) {
     throw new Error('Handle verification failed — could not read back from storage');
   }
   // Notify offscreen document to reload its handle
@@ -39,24 +28,18 @@ async function storeDirectoryHandle(handle) {
 }
 
 async function loadDirectoryHandle() {
-  const database = await openDB();
-  return new Promise((resolve) => {
-    const tx = database.transaction(STORE_NAME, 'readonly');
-    const req = tx.objectStore(STORE_NAME).get('dirHandle');
-    req.onsuccess = () => resolve(req.result || null);
-    req.onerror = () => resolve(null);
-  });
+  return F.readHandle();
 }
 
 async function clearDirectoryHandle() {
+  // Only the explicit "Clear" button deletes config — both marker and handle.
   await chrome.storage.local.remove(['folderName', 'folderSet']);
-  const database = await openDB();
+  const db = await F.openDB();
   await new Promise((resolve) => {
-    const tx = database.transaction(STORE_NAME, 'readwrite');
-    tx.objectStore(STORE_NAME).delete('dirHandle');
+    const tx = db.transaction('handles', 'readwrite');
+    tx.objectStore('handles').delete('dirHandle');
     tx.oncomplete = () => resolve();
   });
-  // Notify offscreen document
   chrome.runtime.sendMessage({ action: 'RELOAD_HANDLE' }).catch(() => {});
 }
 
@@ -65,6 +48,7 @@ async function clearDirectoryHandle() {
 const folderPathEl = document.getElementById('folder-path');
 const folderHintEl = document.getElementById('folder-hint');
 const pickBtn = document.getElementById('pick-folder-btn');
+const reauthBtn = document.getElementById('reauth-folder-btn');
 const clearBtn = document.getElementById('clear-folder-btn');
 const toastEl = document.getElementById('toast');
 
@@ -75,22 +59,26 @@ function showToast(msg, success) {
 }
 
 async function renderFolderStatus() {
-  const stored = await chrome.storage.local.get(['folderName', 'folderSet']);
-  if (stored.folderSet && stored.folderName) {
-    const handle = await loadDirectoryHandle();
-    if (handle) {
-      folderPathEl.textContent = stored.folderName;
-      folderPathEl.classList.add('selected');
-      folderHintEl.textContent = t('optionsFolderReady');
-    } else {
-      folderPathEl.textContent = stored.folderName + ' (expired)';
-      folderPathEl.classList.add('selected');
-      folderHintEl.textContent = t('optionsFolderExpired');
-    }
-  } else {
+  // D7: heal a marker wrongly cleared by the old failure path, but only
+  // when a real handle still exists (a genuine "Clear" removed both).
+  await F.restoreMark();
+  const state = await F.getFolderState();
+
+  folderPathEl.classList.remove('selected', 'needs-auth');
+  if (state.state === 'unconfigured') {
     folderPathEl.textContent = t('optionsFolderNotSelected');
-    folderPathEl.classList.remove('selected');
     folderHintEl.textContent = t('optionsFolderHint');
+    reauthBtn.hidden = true;
+  } else if (state.state === 'needs_auth') {
+    folderPathEl.textContent = state.name;
+    folderPathEl.classList.add('selected', 'needs-auth');
+    folderHintEl.textContent = t('optionsFolderNeedsAuth');
+    reauthBtn.hidden = false;
+  } else {
+    folderPathEl.textContent = state.name;
+    folderPathEl.classList.add('selected');
+    folderHintEl.textContent = t('optionsFolderReady');
+    reauthBtn.hidden = true;
   }
 }
 
@@ -139,14 +127,12 @@ document.querySelectorAll('input[name="uiLanguage"]').forEach(radio => {
   });
 });
 
-// Pick folder
+// Pick folder (only path that opens the OS directory picker)
 pickBtn.addEventListener('click', async () => {
   try {
     const handle = await window.showDirectoryPicker({ mode: 'readwrite' });
     await storeDirectoryHandle(handle);
-    folderPathEl.textContent = handle.name;
-    folderPathEl.classList.add('selected');
-    folderHintEl.textContent = t('optionsFolderReady');
+    await renderFolderStatus();
     showToast(t('optionsFolderSelected', [handle.name]), true);
   } catch (err) {
     if (err.name !== 'AbortError') {
@@ -155,12 +141,27 @@ pickBtn.addEventListener('click', async () => {
   }
 });
 
-// Clear folder
+// Re-authorize the already-stored folder — never re-picks a directory.
+reauthBtn.addEventListener('click', async () => {
+  const handle = await F.readHandle();
+  if (!handle) {
+    await renderFolderStatus();
+    showToast(t('optionsAccessError'), false);
+    return;
+  }
+  const result = await F.requestPermission(handle);
+  if (result === 'granted') {
+    await renderFolderStatus();
+    showToast(t('optionsReauthSuccess'), true);
+  } else {
+    showToast(t('optionsReauthFailed'), false);
+  }
+});
+
+// Clear folder (the only action that deletes config and handle)
 clearBtn.addEventListener('click', async () => {
   await clearDirectoryHandle();
-  folderPathEl.textContent = t('optionsFolderNotSelected');
-  folderPathEl.classList.remove('selected');
-  folderHintEl.textContent = t('optionsFolderHint');
+  await renderFolderStatus();
   showToast(t('optionsFolderCleared'));
 });
 
