@@ -162,6 +162,7 @@ body {
 }
 
 .status-text.idle { color: #888; }
+.status-text.needs-auth { color: #fa8c16; } /* matches the folder row warning color */
 .status-text.working { color: #1890ff; }
 .status-text.success { color: #52c41a; }
 .status-text.error { color: #ff4d4f; }

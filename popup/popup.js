@@ -79,6 +79,16 @@ function setState(state, data) {
       resultDiv.innerHTML = '<span class="result-icon">&#9888;</span> ' + data
         + '<button class="result-action" data-result-action="1">' + t('popupResultAction') + '</button>';
       break;
+    case 'needs-auth':
+      // v2.3.0 UI fix: the status line must mirror the folder state instead
+      // of staying on the static "Ready" text from popup.html.
+      statusText.textContent = t('popupFolderNeedsAuth');
+      statusText.classList.add('needs-auth');
+      break;
+    case 'unconfigured':
+      statusText.textContent = t('popupFolderNoSet');
+      statusText.classList.add('idle');
+      break;
     case 'not-article':
       statusText.textContent = t('popupNotArticle');
       statusText.classList.add('error');
@@ -364,6 +374,11 @@ onI18nReady(async () => {
   folderName = state.name;
   folderState = state.state;
   renderFolderStatus();
+  // Sync the status line with the folder state (an article page would
+  // otherwise keep the static "Ready" text from popup.html).
+  if (folderState === 'needs_auth') setState('needs-auth');
+  else if (folderState === 'unconfigured') setState('unconfigured');
+  else setState('idle');
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab || !tab.url || !tab.url.includes('mp.weixin.qq.com/s/')) {
