@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 620" width="680" height="620" font-family="Microsoft YaHei, PingFang SC, Arial, sans-serif">
+  <rect width="680" height="620" fill="#ffffff"/>
+  <text x="24" y="32" font-size="19" font-weight="700" fill="#0f172a">目标流程：授权放在有手势的页面，失败单独成一类结果</text>
+  <text x="24" y="52" font-size="11" fill="#64748b">方案设计稿（待拍板）；现状流程见 02-保存主流程.svg</text>
+
+  <defs>
+    <marker id="ar" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#475569"/>
+    </marker>
+    <marker id="arRed" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+      <path d="M0,0 L9,4.5 L0,9 z" fill="#dc2626"/>
+    </marker>
+  </defs>
+
+  <!-- Lane 1 -->
+  <rect x="20" y="66" width="640" height="176" rx="12" fill="#eff6ff" stroke="#bfdbfe"/>
+  <text x="36" y="90" font-size="13" font-weight="700" fill="#1d4ed8">① 有真人手势的页面：弹窗 / 设置页</text>
+
+  <rect x="38" y="102" width="248" height="58" rx="8" fill="#ffffff" stroke="#3b82f6"/>
+  <text x="52" y="124" font-size="12.5" font-weight="600" fill="#0f172a">点「保存到文件夹」</text>
+  <text x="52" y="143" font-size="11" fill="#64748b">这次点击提供用户手势</text>
+
+  <rect x="374" y="102" width="268" height="58" rx="8" fill="#ffffff" stroke="#3b82f6"/>
+  <text x="388" y="124" font-size="12.5" font-weight="600" fill="#0f172a">预读凭证 → queryPermission</text>
+  <text x="388" y="143" font-size="11" fill="#64748b">句柄从 IndexedDB 提前读入内存</text>
+
+  <rect x="374" y="176" width="268" height="52" rx="8" fill="#fff7ed" stroke="#fb923c"/>
+  <text x="388" y="197" font-size="12" font-weight="600" fill="#9a3412">非 granted → requestPermission</text>
+  <text x="388" y="215" font-size="11" fill="#9a3412">挂在同一次点击里；可弹「每次访问都允许」</text>
+
+  <path d="M286,131 L368,131" stroke="#475569" stroke-width="1.6" marker-end="url(#ar)"/>
+  <text x="294" y="123" font-size="10.5" fill="#475569">预检</text>
+  <path d="M508,160 L508,172" stroke="#475569" stroke-width="1.6" marker-end="url(#ar)"/>
+  <text x="516" y="171" font-size="10.5" fill="#475569">prompt / denied</text>
+
+  <!-- Lane 2 -->
+  <rect x="20" y="258" width="640" height="140" rx="12" fill="#f0fdf4" stroke="#bbf7d0"/>
+  <text x="36" y="282" font-size="13" font-weight="700" fill="#15803d">② 后台：服务调度 + 隐藏页面写入（无手势，只查询不申请）</text>
+
+  <rect x="38" y="294" width="604" height="50" rx="8" fill="#ffffff" stroke="#22c55e"/>
+  <text x="52" y="315" font-size="12.5" font-weight="600" fill="#0f172a">提取文章 → 隐藏页面只读 queryPermission → 写 Markdown 与图片</text>
+  <text x="52" y="333" font-size="11" fill="#64748b">授权已由 ① 完成；此处不再尝试自动重新授权</text>
+
+  <rect x="38" y="352" width="604" height="36" rx="8" fill="#ffffff" stroke="#a7f3d0" stroke-dasharray="4 3"/>
+  <text x="52" y="375" font-size="11" fill="#166534">失败统一返回结构化错误码：NO_HANDLE / PERMISSION_EXPIRED / PERMISSION_DENIED / WRITE_FAILED / OFFSCREEN_UNAVAILABLE</text>
+
+  <path d="M400,228 L400,288" stroke="#475569" stroke-width="1.6" marker-end="url(#ar)"/>
+  <text x="408" y="252" font-size="10.5" fill="#475569">授权通过</text>
+
+  <!-- Lane 3 -->
+  <rect x="20" y="414" width="640" height="186" rx="12" fill="#fffbeb" stroke="#fde68a"/>
+  <text x="36" y="438" font-size="13" font-weight="700" fill="#a16207">③ 结果：成功与降级分开，配置不被失败改写</text>
+
+  <rect x="38" y="450" width="284" height="60" rx="8" fill="#ffffff" stroke="#16a34a"/>
+  <text x="52" y="472" font-size="12.5" font-weight="600" fill="#15803d">写进文件夹 → 「完成」</text>
+  <text x="52" y="491" font-size="11" fill="#64748b">显示目录名与图片数</text>
+
+  <rect x="358" y="450" width="284" height="60" rx="8" fill="#ffffff" stroke="#dc2626"/>
+  <text x="372" y="472" font-size="12.5" font-weight="600" fill="#b91c1c">没写进去 → 明确失败提示</text>
+  <text x="372" y="491" font-size="11" fill="#64748b">原因 + 下一步按钮（重新授权 / 设置页 / 重试）</text>
+
+  <rect x="358" y="524" width="284" height="60" rx="8" fill="#fef2f2" stroke="#fca5a5"/>
+  <text x="372" y="546" font-size="12" font-weight="600" fill="#b91c1c">若按 D3 自动下载 zip</text>
+  <text x="372" y="565" font-size="11" fill="#b91c1c">结果标「降级」，不报「完成」</text>
+
+  <rect x="38" y="524" width="284" height="60" rx="8" fill="#ffffff" stroke="#fcd34d"/>
+  <text x="52" y="546" font-size="12" font-weight="600" fill="#92400e">folderSet = 用户配置</text>
+  <text x="52" y="565" font-size="11" fill="#92400e">只有手动「清除」才删，失败不删</text>
+
+  <path d="M180,344 L180,446" stroke="#16a34a" stroke-width="1.6" marker-end="url(#ar)"/>
+  <text x="188" y="405" font-size="10.5" fill="#15803d">成功</text>
+  <path d="M500,344 L500,446" stroke="#dc2626" stroke-width="1.6" marker-end="url(#arRed)"/>
+  <text x="508" y="405" font-size="10.5" fill="#b91c1c">失败</text>
+  <path d="M500,510 L500,520" stroke="#dc2626" stroke-width="1.6" marker-end="url(#arRed)"/>
+  <path d="M642,202 L662,202 L662,478 L646,478" stroke="#dc2626" stroke-width="1.4" stroke-dasharray="5 4" fill="none" marker-end="url(#arRed)"/>
+  <text x="516" y="195" font-size="10.5" fill="#b91c1c">用户拒绝授权 → 直接出失败提示</text>
+</svg>

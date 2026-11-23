@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="600" viewBox="0 0 680 600" role="img">
+<title>图 1 整体架构与数据流</title>
+<desc>扩展分为入口层、调度层、内容层、文件层、输出层和状态层，展示各层职责与数据流向。</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+<path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+<text x="40" y="30" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="15" font-weight="500" fill="#2C2C2A">图 1 · 整体架构与数据流</text>
+
+<rect x="40" y="52" width="600" height="78" rx="12" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+<text x="56" y="72" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" font-weight="500" fill="#5F5E5A">① 入口层</text>
+<rect x="56" y="82" width="180" height="36" rx="8" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text x="146" y="100" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="13" fill="#2C2C2A">弹窗三个按钮</text>
+<rect x="250" y="82" width="180" height="36" rx="8" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text x="340" y="100" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="13" fill="#2C2C2A">三个快捷键</text>
+<rect x="444" y="82" width="180" height="36" rx="8" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text x="534" y="100" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="13" fill="#2C2C2A">粘贴文章链接</text>
+
+<path d="M340 130 L340 152" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="40" y="152" width="600" height="78" rx="12" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="56" y="172" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" font-weight="500" fill="#0C447C">② 调度层</text>
+<rect x="56" y="182" width="568" height="36" rx="8" fill="#FFFFFF" stroke="#85B7EB" stroke-width="0.5"/>
+<text x="340" y="200" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="13" fill="#0C447C">后台服务 service-worker.js：接消息 · 校验网址 · 组装内容 · 兜底打包</text>
+
+<path d="M340 230 L186 248" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M340 230 L494 248" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="40" y="248" width="292" height="104" rx="12" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="56" y="270" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" font-weight="500" fill="#0C447C">③ 内容层｜公众号页面</text>
+<text x="56" y="294" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#185FA5">content/*：滚动加载图片 → 抓取正文</text>
+<text x="56" y="316" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#185FA5">Turndown 转 Markdown → 排版后处理</text>
+<text x="56" y="338" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#185FA5">产出：标题、正文、图片清单、原网址</text>
+
+<rect x="348" y="248" width="292" height="104" rx="12" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text x="364" y="270" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" font-weight="500" fill="#085041">④ 文件层｜隐藏页面</text>
+<text x="364" y="294" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#0F6E56">offscreen/*：读文件夹凭证 → 查权限</text>
+<text x="364" y="316" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#0F6E56">下载图片 → 建目录 → 写 Markdown</text>
+<text x="364" y="338" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#0F6E56">仅 Chromium 走此路；Firefox 用后台直写</text>
+
+<path d="M186 352 L186 372" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M494 352 L494 372" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+<rect x="40" y="372" width="600" height="78" rx="12" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+<text x="56" y="392" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" font-weight="500" fill="#5F5E5A">⑤ 输出层</text>
+<rect x="56" y="402" width="132" height="36" rx="8" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text x="122" y="420" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="13" fill="#2C2C2A">本地文件夹</text>
+<rect x="202" y="402" width="132" height="36" rx="8" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text x="268" y="420" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="13" fill="#2C2C2A">zip 下载</text>
+<rect x="348" y="402" width="132" height="36" rx="8" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text x="414" y="420" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="13" fill="#2C2C2A">剪贴板</text>
+<rect x="494" y="402" width="132" height="36" rx="8" fill="#FFFFFF" stroke="#B4B2A9" stroke-width="0.5"/>
+<text x="560" y="420" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="13" fill="#2C2C2A">PDF</text>
+
+<rect x="40" y="468" width="600" height="112" rx="12" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+<text x="56" y="490" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" font-weight="500" fill="#633806">⑥ 状态与配置｜三处独立存放</text>
+<rect x="56" y="500" width="180" height="58" rx="8" fill="#FFFFFF" stroke="#EF9F27" stroke-width="0.5"/>
+<text x="146" y="518" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="13" font-weight="500" fill="#633806">显示标记</text>
+<text x="146" y="540" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#854F0B">chrome.storage.local</text>
+<rect x="250" y="500" width="180" height="58" rx="8" fill="#FFFFFF" stroke="#EF9F27" stroke-width="0.5"/>
+<text x="340" y="518" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="13" font-weight="500" fill="#633806">文件夹凭证</text>
+<text x="340" y="540" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#854F0B">IndexedDB 的 dirHandle</text>
+<rect x="444" y="500" width="180" height="58" rx="8" fill="#FFFFFF" stroke="#EF9F27" stroke-width="0.5"/>
+<text x="534" y="518" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="13" font-weight="500" fill="#633806">写入许可</text>
+<text x="534" y="540" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#854F0B">浏览器权限系统</text>
+<text x="56" y="572" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#854F0B">保存流程只用后两者；显示标记只给弹窗和设置页看</text>
+</svg>

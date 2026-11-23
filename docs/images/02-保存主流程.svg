@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="720" viewBox="0 0 680 720" role="img">
+<title>图 2 保存到文件夹的完整流程</title>
+<desc>从触发保存到内容提取、组装、隐藏页面写入，以及成功后写文件夹与失败后打包 zip 的两条分支。</desc>
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+<path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+<text x="40" y="30" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="15" font-weight="500" fill="#2C2C2A">图 2 · 保存到文件夹的完整流程</text>
+
+<rect x="170" y="50" width="340" height="56" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="340" y="70" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="14" font-weight="500" fill="#0C447C">1  触发保存</text>
+<text x="340" y="89" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#185FA5">弹窗按钮 · Ctrl+Shift+S · 粘贴链接</text>
+<path d="M340 106 L340 130" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<rect x="170" y="130" width="340" height="56" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="340" y="150" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="14" font-weight="500" fill="#0C447C">2  后台校验网址</text>
+<text x="340" y="169" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#185FA5">只认含 /s/ 的短链，长链判为非文章页</text>
+<path d="M340 186 L340 210" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<rect x="170" y="210" width="340" height="56" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="340" y="230" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="14" font-weight="500" fill="#0C447C">3  内容脚本提取文章</text>
+<text x="340" y="249" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#185FA5">滚动加载 → 抓正文与图片 → 转 Markdown → 后处理</text>
+<path d="M340 266 L340 290" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<rect x="170" y="290" width="340" height="56" rx="10" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
+<text x="340" y="310" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="14" font-weight="500" fill="#0C447C">4  后台组装内容</text>
+<text x="340" y="329" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#185FA5">加 frontmatter · 生成目录名 · 读输出结构</text>
+<path d="M340 346 L340 370" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<rect x="170" y="370" width="340" height="56" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+<text x="340" y="390" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="14" font-weight="500" fill="#633806">5  确保隐藏页面存在</text>
+<text x="340" y="409" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#854F0B">Chromium 建隐藏页面；Firefox 走后台直写</text>
+<path d="M340 426 L340 450" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<rect x="170" y="450" width="340" height="56" rx="10" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
+<text x="340" y="470" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="14" font-weight="500" fill="#633806">6  读文件夹凭证并查权限</text>
+<text x="340" y="489" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#854F0B">从 IndexedDB 取 dirHandle，问浏览器是否仍可写</text>
+
+<path d="M340 506 L340 522 L180 522 L180 540" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M340 506 L340 522 L500 522 L500 540" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<rect x="40" y="540" width="280" height="86" rx="10" fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+<text x="180" y="562" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="14" font-weight="500" fill="#085041">有权限 · 成功路径</text>
+<text x="180" y="586" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#0F6E56">下载图片 → 建文章目录 → 写文件</text>
+<text x="180" y="606" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#0F6E56">article.md 或 标题.md 加图片目录</text>
+
+<rect x="360" y="540" width="280" height="86" rx="10" fill="#FCEBEB" stroke="#A32D2D" stroke-width="0.5"/>
+<text x="500" y="562" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="14" font-weight="500" fill="#791F1F">无权限或写入异常 · 失败路径</text>
+<text x="500" y="586" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#A32D2D">清显示标记 → 打包 zip 下载</text>
+<text x="500" y="606" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="12" fill="#A32D2D">仍然报「完成」（截图里的压缩包）</text>
+
+<path d="M180 626 L180 646 L340 646 L340 660" fill="none" stroke="#5F5E5A" stroke-width="1.5" marker-end="url(#arrow)"/>
+<path d="M500 626 L500 646 L340 646" fill="none" stroke="#5F5E5A" stroke-width="1.5"/>
+<rect x="170" y="660" width="340" height="44" rx="10" fill="#F1EFE8" stroke="#B4B2A9" stroke-width="0.5"/>
+<text x="340" y="682" text-anchor="middle" dominant-baseline="central" font-family="system-ui, Microsoft YaHei, sans-serif" font-size="13" fill="#2C2C2A">弹窗显示「已保存」并给出文件名与图片数</text>
+</svg>
