@@ -4,6 +4,7 @@
 
 importScripts('../shared/browser.js');
 importScripts('../shared/i18n.js');
+importScripts('../shared/folder-permission.js');
 importScripts('../lib/jszip.min.js');
 
 // ── Offscreen Document Management ──────────────────────────────────────
@@ -100,9 +101,18 @@ async function ensureOffscreenDocument() {
 
   if (_offscreenReady) return true;
 
-  // Check if already exists
-  const clients = await self.clients.matchAll({ includeUncontrolled: true });
-  const existing = clients.find(c => c.url.includes(OFFSCREEN_URL));
+  // Prefer getContexts() (Chrome 116+); fall back to clients.matchAll().
+  let existing = false;
+  if (chrome.runtime.getContexts) {
+    try {
+      const contexts = await chrome.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] });
+      existing = contexts && contexts.length > 0;
+    } catch (e) { existing = false; }
+  }
+  if (!existing) {
+    const clients = await self.clients.matchAll({ includeUncontrolled: true });
+    existing = clients.some(c => c.url.includes(OFFSCREEN_URL));
+  }
   if (existing) {
     _offscreenReady = true;
     return true;
@@ -113,24 +123,27 @@ async function ensureOffscreenDocument() {
 
   _creatingOffscreen = (async () => {
     try {
-      await chrome.offscreen.createDocument({
-        url: OFFSCREEN_URL,
-        reasons: ['BLOBS'],
-        justification: 'Persist FileSystemDirectoryHandle for folder writes'
-      });
-      // Wait for OFFSCREEN_READY message
+      // Register the ready listener BEFORE creating the document, otherwise
+      // a fast OFFSCREEN_READY can be missed (race fixed in v2.3.0).
       await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => {
-          reject(new Error('Offscreen document creation timed out'));
-        }, 10000);
+        let done = false;
+        const finish = (err) => {
+          if (done) return;
+          done = true;
+          clearTimeout(timeout);
+          chrome.runtime.onMessage.removeListener(listener);
+          if (err) reject(err); else resolve();
+        };
+        const timeout = setTimeout(() => finish(new Error('Offscreen document creation timed out')), 10000);
         const listener = (msg) => {
-          if (msg.action === 'OFFSCREEN_READY') {
-            clearTimeout(timeout);
-            chrome.runtime.onMessage.removeListener(listener);
-            resolve();
-          }
+          if (msg.action === 'OFFSCREEN_READY' || msg.action === 'OFFSCREEN_HEARTBEAT') finish();
         };
         chrome.runtime.onMessage.addListener(listener);
+        chrome.offscreen.createDocument({
+          url: OFFSCREEN_URL,
+          reasons: ['BLOBS'],
+          justification: 'Persist FileSystemDirectoryHandle for folder writes'
+        }).catch(finish);
       });
       _offscreenReady = true;
       _creatingOffscreen = null;
@@ -310,6 +323,12 @@ async function handleSaveToFolder(tabId, popupPort) {
     }
 
     console.warn('Offscreen write failed:', result?.code, result?.message);
+    // v2.3.0: config is never cleared on failure. Report a structured
+    // degraded result (not "done") and fall back to zip.
+    return handleSaveFailure(popupPort, {
+      title, author, publishDate, markdown, images, sourceUrl,
+      outputStructure, safeTitle
+    }, result || { success: false, code: 'COMMUNICATION_ERROR' });
   } else {
     // Non-Chromium: try direct write from service worker
     // (Firefox background scripts are persistent, so folder handles survive)
@@ -358,21 +377,54 @@ async function handleSaveToFolder(tabId, popupPort) {
       }
       _dirHandle = null;
     }
-    result = { success: false, code: 'NO_FOLDER' };
+    // Non-Chromium path failed too.
+    return handleSaveFailure(popupPort, {
+      title, author, publishDate, markdown, images, sourceUrl,
+      outputStructure, safeTitle
+    }, { success: false, code: 'NO_HANDLE' });
+  }
+}
+
+// A write failed. Keep the folder config intact, tell the user plainly,
+// and still download a zip as a degraded fallback (decision D3=①).
+// Keyboard-shortcut calls have no port: show a badge and open Settings so
+// the failure is never silent (decision D4=②).
+async function handleSaveFailure(popupPort, articleCtx, result) {
+  const code = result.code || 'WRITE_FAILED';
+
+  // Code -> reason message key + next-action hint. Popup turns these into
+  // t(reason) / t(action) text and buttons.
+  const REASON_KEYS = {
+    NO_HANDLE: 'swReasonNoFolder',
+    PERMISSION_EXPIRED: 'swReasonExpired',
+    PERMISSION_DENIED: 'swReasonDenied',
+    WRITE_FAILED: 'swReasonWriteError',
+    OFFSCREEN_UNAVAILABLE: 'swReasonOffscreen',
+    COMMUNICATION_ERROR: 'swReasonComm'
+  };
+  const NEXT_KEYS = {
+    NO_HANDLE: 'swNextPickFolder',
+    PERMISSION_EXPIRED: 'swNextReauthorize',
+    PERMISSION_DENIED: 'swNextSettings',
+    WRITE_FAILED: 'swNextRetry',
+    OFFSCREEN_UNAVAILABLE: 'swNextReload',
+    COMMUNICATION_ERROR: 'swNextRetry'
+  };
+
+  const degradedInfo = {
+    code,
+    reason: t(REASON_KEYS[code] || 'swReasonWriteError'),
+    next: t(NEXT_KEYS[code] || 'swNextRetry')
+  };
+  if (!popupPort) {
+    // No UI channel (keyboard shortcut): badge + open settings.
+    notifyBadge('!');
+    try { await chrome.runtime.openOptionsPage(); } catch (e) {}
   }
 
-  // 4. Both offscreen and direct write failed — fall back to zip
-  // Don't clear folderName/folderSet for PERMISSION_DENIED — the handle
-  // might just need a user gesture to re-authorize in the options page.
-  if (result?.code !== 'PERMISSION_DENIED') {
-    chrome.storage.local.remove(['folderName', 'folderSet']);
-  }
-
-  sendStatus(popupPort, t('swDirectSaveFailed'));
-  return handleZipFallback(tabId, popupPort, {
-    title, author, publishDate, markdown, images, sourceUrl,
-    outputStructure, safeTitle
-  });
+  // Still download a zip, but report one combined degraded result only after
+  // the zip is ready, so progress messages can't overwrite the conclusion.
+  return handleZipFallback(null, popupPort, articleCtx, degradedInfo);
 }
 
 // ── Core: PDF ──────────────────────────────────────────────────────────
@@ -527,7 +579,7 @@ async function handleCopyToClipboard(tabId) {
 
 // ── Zip Fallback ───────────────────────────────────────────────────────
 
-async function handleZipFallback(tabId, popupPort, cachedArticle) {
+async function handleZipFallback(tabId, popupPort, cachedArticle, degradedInfo) {
   const article = cachedArticle || await extractArticle(tabId);
   if (!article) return;
 
@@ -599,8 +651,20 @@ async function handleZipFallback(tabId, popupPort, cachedArticle) {
   const dataUrl = 'data:application/zip;base64,' + btoa(binary);
 
   await chrome.downloads.download({ url: dataUrl, filename: filename, saveAs: false });
-  sendDone(popupPort, filename, succeeded.length, (article.imageResults || []).length - succeeded.length || 0);
-  notifyBadge('');
+  if (degradedInfo) {
+    // v2.3.0: a zip produced after a failed folder write is a downgrade,
+    // never a success. Send one combined result so no progress message can
+    // overwrite it.
+    sendDegraded(popupPort, {
+      ...degradedInfo,
+      filename: filename,
+      imageCount: succeeded.length
+    });
+    notifyBadge('!');
+  } else {
+    sendDone(popupPort, filename, succeeded.length, (article.imageResults || []).length - succeeded.length || 0);
+    notifyBadge('');
+  }
 }
 
 // ── Article Extraction ─────────────────────────────────────────────────
@@ -683,6 +747,23 @@ function sendDonePdf(port, pdfFilename) {
   if (!port) return;
   try {
     port.postMessage({ done: true, pdf: true, filename: pdfFilename });
+  } catch (e) {}
+}
+
+// v2.3.0: the folder write failed — tell the UI why, what to do next, and
+// which zip artifact was downloaded. Sent once, after the zip is ready, so
+// it is never overwritten by progress messages. Never uses {done:true}.
+function sendDegraded(port, info) {
+  if (!port) return;
+  try {
+    port.postMessage({
+      degraded: true,
+      code: info.code,
+      reason: info.reason,
+      next: info.next,
+      filename: info.filename,
+      imageCount: info.imageCount
+    });
   } catch (e) {}
 }
 
