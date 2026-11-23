@@ -35,6 +35,7 @@ SOURCES=(
   shared
   _locales
   offscreen
+  help
 )
 
 # ── Chrome ──────────────────────────────────────────────────────

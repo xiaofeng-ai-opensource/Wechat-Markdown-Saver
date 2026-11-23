@@ -1,0 +1,240 @@
+/* help.css — 扩展内「使用说明」页面样式（浅色主题，与弹窗的微信绿呼应） */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  --green: #07c160;
+  --ink: #1a1a1a;
+  --muted: #666;
+  --line: #e6e9e7;
+  --bg: #f5f6f7;
+  --link: #1890ff;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-size: 14px;
+  line-height: 1.85;
+}
+
+.page {
+  max-width: 820px;
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+}
+
+/* ── 页头 ─────────────────────────────────────────── */
+.hero {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 28px 30px;
+  margin-bottom: 18px;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  color: #068a47;
+  background: #eafaf1;
+  border: 1px solid #c8f0da;
+  border-radius: 20px;
+  padding: 1px 12px;
+  margin-bottom: 12px;
+}
+
+.hero h1 {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.lead {
+  color: var(--muted);
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+/* ── 目录 ─────────────────────────────────────────── */
+.toc {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 18px 30px 22px;
+  margin-bottom: 18px;
+}
+
+.toc h2 {
+  font-size: 15px;
+  border-left: none;
+  padding-left: 0;
+  margin-bottom: 10px;
+  color: var(--muted);
+}
+
+.toc ul {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 24px;
+}
+
+.toc a {
+  color: var(--link);
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.toc a:hover {
+  text-decoration: underline;
+}
+
+/* ── 正文区块 ─────────────────────────────────────── */
+main section {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 24px 30px;
+  margin-bottom: 18px;
+}
+
+h2 {
+  font-size: 18px;
+  font-weight: 650;
+  border-left: 4px solid var(--green);
+  padding-left: 12px;
+  margin-bottom: 14px;
+}
+
+h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 20px 0 8px;
+}
+
+p {
+  margin-bottom: 10px;
+}
+
+ul, ol {
+  padding-left: 22px;
+  margin-bottom: 10px;
+}
+
+li {
+  margin-bottom: 4px;
+}
+
+strong {
+  font-weight: 650;
+}
+
+/* ── 表格 ─────────────────────────────────────────── */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0 16px;
+  font-size: 13px;
+}
+
+th, td {
+  border: 1px solid var(--line);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #f7f9f8;
+  font-weight: 600;
+}
+
+/* ── 代码与目录树 ─────────────────────────────────── */
+code {
+  background: #f0f2f1;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: Consolas, Monaco, "Courier New", monospace;
+  font-size: 12px;
+}
+
+pre {
+  background: #f7f8f7;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  font-family: Consolas, Monaco, "Courier New", monospace;
+  font-size: 12.5px;
+  line-height: 1.7;
+  margin: 10px 0 16px;
+}
+
+pre code {
+  background: none;
+  padding: 0;
+  font-size: inherit;
+}
+
+kbd {
+  background: #f0f2f1;
+  border: 1px solid #d0d4d1;
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 12px;
+}
+
+/* ── 提示块 ───────────────────────────────────────── */
+.note {
+  background: #f0fdf4;
+  border-left: 3px solid var(--green);
+  border-radius: 0 6px 6px 0;
+  padding: 10px 14px;
+  margin: 12px 0;
+  font-size: 13px;
+  color: #2c6e49;
+}
+
+.warn {
+  background: #fff7ed;
+  border-left: 3px solid #f59e0b;
+  border-radius: 0 6px 6px 0;
+  padding: 10px 14px;
+  margin: 12px 0;
+  font-size: 13px;
+  color: #8a5a12;
+}
+
+.faq-q {
+  font-weight: 650;
+  color: #1a1a1a;
+  margin-top: 16px;
+  margin-bottom: 2px;
+}
+
+.faq-a {
+  color: #555;
+  font-size: 13px;
+}
+
+/* ── 页脚 ─────────────────────────────────────────── */
+footer {
+  text-align: center;
+  color: #999;
+  font-size: 12px;
+  margin-top: 26px;
+}
+
+@media (max-width: 640px) {
+  .page { padding: 16px 12px 40px; }
+  .hero, .toc, main section { padding: 18px 16px; }
+  .toc ul { grid-template-columns: 1fr; }
+  .hero h1 { font-size: 22px; }
+}

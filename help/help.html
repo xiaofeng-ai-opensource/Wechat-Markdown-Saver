@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>使用说明 — 微信 Markdown 保存助手</title>
+  <link rel="stylesheet" href="help.css">
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <div class="badge">微信 Markdown 保存助手 · 版本 2.2.0</div>
+    <h1>使用说明</h1>
+    <p class="lead">本文按当前代码的实际行为编写；与 README 描述不一致的地方，在「九、已知偏差」里单独列出。支持 Chrome、Edge、Firefox。</p>
+  </header>
+
+  <nav class="toc">
+    <h2>目录</h2>
+    <ul>
+      <li><a href="#s1">一、它能做什么</a></li>
+      <li><a href="#s2">二、安装</a></li>
+      <li><a href="#s3">三、第一次使用：先选保存文件夹</a></li>
+      <li><a href="#s4">四、认识弹窗</a></li>
+      <li><a href="#s5">五、三种保存方式</a></li>
+      <li><a href="#s6">六、设置项</a></li>
+      <li><a href="#s7">七、输出目录长什么样</a></li>
+      <li><a href="#s8">八、常见问题</a></li>
+      <li><a href="#s9">九、已知偏差</a></li>
+      <li><a href="#s10">十、快捷键一览</a></li>
+    </ul>
+  </nav>
+
+  <main>
+
+    <!-- 一 -->
+    <section id="s1">
+      <h2>一、它能做什么</h2>
+      <p>把微信公众号文章（网址形如 <code>mp.weixin.qq.com/s/...</code>）保存成 Markdown（一种轻量标记语言文本格式），也可以把文章里的图片一起下载到本地，或复制成 Markdown 文本、生成 PDF（便携式文档格式）。</p>
+      <p>三种保存方式互不冲突：每次操作只执行你点的那一种，不会顺带做另外两种。</p>
+    </section>
+
+    <!-- 二 -->
+    <section id="s2">
+      <h2>二、安装</h2>
+      <h3>Chrome / Edge</h3>
+      <ol>
+        <li>下载发布包 <code>wechat-md-saver-chrome-x.x.x.zip</code> 或 <code>wechat-md-saver-edge-x.x.x.zip</code>，解压到任意文件夹。</li>
+        <li>打开 <code>chrome://extensions/</code>（Chrome）或 <code>edge://extensions/</code>（Edge）。</li>
+        <li>打开右上角的「开发者模式」。</li>
+        <li>点击「加载已解压的扩展」，选择刚才解压出来的文件夹。</li>
+      </ol>
+      <h3>Firefox</h3>
+      <ol>
+        <li>下载 <code>wechat-md-saver-firefox-x.x.x.zip</code> 并解压。</li>
+        <li>打开 <code>about:debugging#/runtime/this-firefox</code>。</li>
+        <li>点击「临时载入附加组件」，选择解压文件夹里的 <code>manifest.json</code>。</li>
+      </ol>
+      <div class="note">Firefox 不支持文件系统访问接口（File System Access API，浏览器提供的本地目录读写能力），因此不能选择保存文件夹，文章会以 zip（压缩打包文件）形式下载，需要手动解压。</div>
+    </section>
+
+    <!-- 三 -->
+    <section id="s3">
+      <h2>三、第一次使用：先选保存文件夹</h2>
+      <ol>
+        <li>点击浏览器工具栏上的扩展图标，打开弹窗。</li>
+        <li>点击弹窗底部的「设置」，或点击文件夹一栏右侧的「更换」，进入设置页。</li>
+        <li>在「保存文件夹」处点击「选择文件夹」，授权一个本地目录。</li>
+      </ol>
+      <p>建议选择 Dropbox / OneDrive / iCloud 等同步盘里的目录，方便多设备同步。</p>
+      <ul>
+        <li>如果不选文件夹，保存时会自动降级为下载一个 zip 文件，需要自己解压。</li>
+        <li>文件夹授权保存在浏览器本地数据库（IndexedDB）中。浏览器重启或授权过期后，设置页会显示「权限已过期」，重新选一次目录即可。</li>
+        <li>在弹窗里看到绿色文件夹名，表示已设置成功。</li>
+      </ul>
+    </section>
+
+    <!-- 四 -->
+    <section id="s4">
+      <h2>四、认识弹窗</h2>
+      <p>从上到下依次是：</p>
+      <table>
+        <thead><tr><th>区域</th><th>作用</th></tr></thead>
+        <tbody>
+          <tr><td>标题与副标题</td><td>显示扩展名称</td></tr>
+          <tr><td>文件夹状态</td><td>显示已选文件夹名；「更换」直接进入设置页</td></tr>
+          <tr><td>网址输入框 + 「保存」</td><td>粘贴文章链接后台保存；输入框为空，或链接不含 <code>mp.weixin.qq.com/s/</code>，按钮不可点</td></tr>
+          <tr><td>「或保存当前页面」分隔线</td><td>提示下方按钮作用于当前打开的标签页</td></tr>
+          <tr><td>状态区</td><td>显示「就绪 / 处理中… / 完成！/ 失败」；当前不是文章页时提示「不是微信公众号文章」并禁用按钮</td></tr>
+          <tr><td>三个主按钮</td><td>「保存到文件夹」「复制到剪贴板」「保存为 PDF」</td></tr>
+          <tr><td>快捷键提示</td><td>三组快捷键及其对应动作</td></tr>
+          <tr><td>结果区</td><td>成功显示保存的文件名和图片数量，失败显示具体原因</td></tr>
+          <tr><td>底部</td><td>「设置 · 帮助」；点「帮助」会在新标签页打开扩展内的这份说明网页版</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 五 -->
+    <section id="s5">
+      <h2>五、三种保存方式</h2>
+      <table>
+        <thead><tr><th>操作</th><th>快捷键</th><th>图片如何处理</th><th>结果落在哪里</th></tr></thead>
+        <tbody>
+          <tr><td>保存到文件夹</td><td><kbd>Ctrl+Shift+S</kbd></td><td>全部下载到本地，Markdown 里换成相对路径</td><td>你选的文件夹；失败时降级为 zip 下载</td></tr>
+          <tr><td>复制到剪贴板</td><td><kbd>Ctrl+Shift+C</kbd></td><td>不下载，保留原始远程链接</td><td>系统剪贴板</td></tr>
+          <tr><td>保存为 PDF</td><td><kbd>Ctrl+Shift+P</kbd></td><td>保留在排版页面中</td><td>已选文件夹，或浏览器默认下载目录</td></tr>
+        </tbody>
+      </table>
+
+      <h3>1. 保存到文件夹</h3>
+      <ul>
+        <li>流程：提取文章 → 下载全部图片 → 在你选的文件夹里新建一个文章目录并写入文件。</li>
+        <li>生成的 Markdown 文件开头带一段 YAML frontmatter（文件头部的元数据区块），包含 <code>title</code>（标题）、<code>author</code>（作者）、<code>date</code>（发布日期）、<code>source</code>（原文网址）、<code>saved_at</code>（保存时间）五个字段。</li>
+        <li>图片链接会被替换成相对路径，所以把整个文章目录一起拷走，图片仍然能显示。</li>
+        <li>图片下载为并发 3 张、每张最多尝试 2 次、单次超时 15 秒。个别图片失败不会中断保存，结果里会显示「N 张失败」，失败的图片在 Markdown 中仍保留远程链接。</li>
+        <li>成功时扩展图标会短暂显示绿色对勾。</li>
+      </ul>
+
+      <h3>2. 复制到剪贴板</h3>
+      <ul>
+        <li>把带同样五个元数据字段的 Markdown 文本复制到剪贴板，<strong>不下载图片</strong>，图片保留原始远程链接。</li>
+        <li>适合直接粘贴到 Notion、Obsidian（一款本地笔记软件）或其他编辑器；要注意远程图片链接日后可能失效。</li>
+        <li>只能在文章页使用：非文章页会提示「不是微信公众号文章」。</li>
+      </ul>
+
+      <h3>3. 保存为 PDF</h3>
+      <p>实际流程与设置页里的旧文案不同，请以下面为准：</p>
+      <ol>
+        <li>提取文章的原始内容，生成一个 A4 版式、含标题 / 作者 / 日期 / 来源网址的排版页面。</li>
+        <li>通过浏览器调试器接口（Debugger API）<strong>静默</strong>生成 PDF，不需要你点打印。</li>
+        <li>如果已选文件夹且写入成功，PDF 直接写进该文件夹；否则下载到浏览器默认下载目录。</li>
+        <li>文件名为「文章标题.pdf」。</li>
+        <li>如果调试器接口不可用或生成失败，会回退为在文章页打开浏览器打印对话框，此时需要手动选择「另存为 PDF」。</li>
+      </ol>
+
+      <h3>4. 粘贴链接后台保存</h3>
+      <ul>
+        <li>在弹窗顶部粘贴含 <code>mp.weixin.qq.com/s/</code> 的短链，点击「保存」。<code>mp.weixin.qq.com/s?__biz=...</code> 这类长链不会被接受，按钮保持不可点。</li>
+        <li>扩展会在后台开一个不激活的标签页，等页面加载完成（最多等 30 秒），再等 2 秒让图片地址就绪，然后提取内容并保存，最后自动关闭这个临时标签页。</li>
+        <li>这种方式只执行「保存到文件夹」，不会复制到剪贴板，也不会生成 PDF。</li>
+        <li>页面加载超时、内容提取失败或保存失败时会提示错误，并尽量关闭临时标签页。</li>
+      </ul>
+    </section>
+
+    <!-- 六 -->
+    <section id="s6">
+      <h2>六、设置项</h2>
+      <p>进入方式：弹窗底部「设置」，或右键扩展图标选择「选项」。</p>
+      <table>
+        <thead><tr><th>设置</th><th>可选项</th><th>实际作用</th></tr></thead>
+        <tbody>
+          <tr><td>语言</td><td>English / 中文</td><td>实时切换界面文案。未手动设置时跟随浏览器语言，中文环境自动显示中文</td></tr>
+          <tr><td>保存文件夹</td><td>选择文件夹 / 清除</td><td>决定文章写到哪里。未设置或失效时降级为 zip 下载</td></tr>
+          <tr><td>输出结构</td><td>简单 / Obsidian</td><td>决定文章目录的布局，见下一节</td></tr>
+          <tr><td>默认保存模式</td><td>保存到本地文件夹 / 复制到剪贴板 / 两者都做</td><td><strong>当前不生效</strong>，详见「九、已知偏差」</td></tr>
+        </tbody>
+      </table>
+      <p>快捷键不在这里修改，方法见「八、常见问题」。</p>
+    </section>
+
+    <!-- 七 -->
+    <section id="s7">
+      <h2>七、输出目录长什么样</h2>
+      <p>每次保存会新建一个以「标题_时间戳」命名的子目录。标题中的 <code>/ \ : * ? &quot; &lt; &gt; |</code> 会替换为 <code>-</code>，空白会替换为 <code>_</code>，并截断到 100 个字符。</p>
+
+      <h3>简单模式（默认）</h3>
+      <pre>你的文件夹/
+└── 文章标题_kx9f2a/
+    ├── article.md
+    └── images/
+        ├── image1.png
+        ├── image2.jpg
+        └── ...</pre>
+
+      <h3>Obsidian 模式</h3>
+      <pre>你的文件夹/
+└── 文章标题_kx9f2a/
+    ├── 文章标题.md
+    └── assets/
+        └── 文章标题/
+            ├── image1.png
+            ├── image2.jpg
+            └── ...</pre>
+
+      <p>也就是说，两种模式的区别有两处：Markdown 文件名（<code>article.md</code> 或「标题.md」），以及图片目录（<code>images/</code> 或 <code>assets/标题/</code>）。Obsidian（一款本地笔记软件）用户一般选后者，图片链接更不容易失效。</p>
+      <div class="note">降级成 zip 下载时，压缩包内部布局与所选结构一致，但 Markdown 文件固定叫 <code>article.md</code>，即使选了 Obsidian 模式也一样。</div>
+    </section>
+
+    <!-- 八 -->
+    <section id="s8">
+      <h2>八、常见问题</h2>
+
+      <p class="faq-q">点按钮没反应，或提示「不是微信公众号文章」</p>
+      <p class="faq-a">扩展当前只认网址里含 <code>mp.weixin.qq.com/s/</code> 的短链。<code>mp.weixin.qq.com/s?__biz=...</code> 这类长链（旧式分享链接）会被判成非文章页，连按钮都会被禁用；请改用短链，或在微信里重新复制文章链接。刚安装完扩展时，也需要刷新已打开的文章页。</p>
+
+      <p class="faq-q">图片少了，或结果里显示「N 张失败」</p>
+      <p class="faq-a">单张图片超时 15 秒、最多重试 2 次，微信图片服务器偶发拦截。重新保存一次通常能补齐；失败的图片在 Markdown 里仍保留远程链接。</p>
+
+      <p class="faq-q">设置页文件夹显示「权限已过期」，或突然变回「未选择」</p>
+      <p class="faq-a">浏览器重启或长时间未使用后授权会失效；另外，直写文件夹失败并降级成 zip 下载时，代码也会清掉已设置的标记，看起来就像设置丢了。两种情况重新点一次「选择文件夹」即可。</p>
+
+      <p class="faq-q">没选文件夹也能保存吗</p>
+      <p class="faq-a">能。会自动下载一个 zip 文件，解压后即可得到文章和图片目录。</p>
+
+      <p class="faq-q">扩展图标上闪过一个符号</p>
+      <p class="faq-a">绿色对勾表示成功；叉号表示当前不是文章页，感叹号表示执行出错，问号表示没找到标签页，约 1.5 至 2 秒后自动消失。</p>
+
+      <p class="faq-q">想改快捷键</p>
+      <p class="faq-a">Chrome 打开 <code>chrome://extensions/shortcuts</code>；Edge 打开 <code>edge://extensions/shortcuts</code>；Firefox 打开 <code>about:addons</code> → 齿轮图标 →「管理扩展快捷键」。</p>
+
+      <p class="faq-q">点「保存为 PDF」却弹出了打印对话框</p>
+      <p class="faq-a">说明静默生成没成功，已回退到浏览器打印。在对话框里选择「另存为 PDF」即可。</p>
+
+      <p class="faq-q">Firefox 里「选择文件夹」按钮是灰的</p>
+      <p class="faq-a">正常现象。Firefox 不支持该接口，请用 zip 下载方式。</p>
+    </section>
+
+    <!-- 九 -->
+    <section id="s9">
+      <h2>九、已知偏差（按当前代码如实标注）</h2>
+      <div class="warn"><strong>1.「默认保存模式」设置当前不生效。</strong> 设置页会把选择写入本地存储，但弹窗按钮、快捷键和后台服务都没有读取这个值。无论选哪一项，点「保存到文件夹」仍只写文件夹，点「复制到剪贴板」仍只复制，不会自动变成「两者都做」。请直接点对应按钮或按对应快捷键。</div>
+      <div class="warn"><strong>2. 设置页里 PDF 的说明与实际实现不符。</strong> 页面写的是「在打印优化页面中打开文章并触发保存为 PDF」，实际是调试器接口静默生成 PDF 并写入文件夹或下载，只有失败时才回退到打印对话框。</div>
+      <div class="warn"><strong>3. zip 降级时 Markdown 文件名固定为 <code>article.md</code>。</strong> 即使选了 Obsidian 模式，压缩包里也不是「标题.md」；但图片目录仍按所选结构组织。</div>
+      <div class="warn"><strong>4. 个别提示文案在两套文案来源里不一致</strong>（内置文案表与浏览器本地化文件），界面显示以内置文案表为准，功能不受影响。</div>
+      <div class="warn"><strong>5. 网址判定只认短链。</strong> 代码里有 8 处用「网址里是否包含 <code>mp.weixin.qq.com/s/</code>」来判断是不是文章页，长链（<code>/s?__biz=...</code>）因此会被误判为非文章，虽然内容脚本其实仍能抓取。应对办法见「八、常见问题」第一条。</div>
+    </section>
+
+    <!-- 十 -->
+    <section id="s10">
+      <h2>十、快捷键一览</h2>
+      <table>
+        <thead><tr><th>快捷键</th><th>动作</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Ctrl+Shift+S</kbd></td><td>保存到文件夹</td></tr>
+          <tr><td><kbd>Ctrl+Shift+C</kbd></td><td>复制到剪贴板</td></tr>
+          <tr><td><kbd>Ctrl+Shift+P</kbd></td><td>保存为 PDF</td></tr>
+        </tbody>
+      </table>
+      <p>这三组是扩展建议的默认组合，可以在「八、常见问题」列出的浏览器快捷键管理页面自行修改或关闭。</p>
+    </section>
+
+  </main>
+
+  <footer>微信 Markdown 保存助手 · 使用说明（版本 2.2.0）· 仓库内对应文档：docs/使用说明.md</footer>
+
+</div>
+</body>
+</html>

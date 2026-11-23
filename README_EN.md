@@ -53,6 +53,8 @@ Let everyone truly save WeChat articles into their own knowledge base.
 
 ## Usage
 
+> For the full Chinese user guide, see [docs/使用说明.md](docs/使用说明.md). You can also click "Help" at the bottom of the popup to open the in-extension guide.
+
 ### Basic Operation
 
 1. Open any WeChat official account article (`mp.weixin.qq.com/s/...`)

@@ -16,6 +16,7 @@
   "popupSaveShortcut": { "message": "Save" },
   "popupCopyShortcut": { "message": "Copy" },
   "popupSettingsLink": { "message": "Settings" },
+  "popupHelpLink": { "message": "Help" },
   "popupSaveToFolder": { "message": "Saving to folder..." },
   "popupCopyingToClipboard": { "message": "Copying to clipboard..." },
   "popupCopied": { "message": "Copied to clipboard" },

@@ -1,4 +1,4 @@
-# build.ps1 — Package the extension for Chrome, Firefox, and Edge
+﻿# build.ps1 — Package the extension for Chrome, Firefox, and Edge
 # Output: dist/chrome/  dist/firefox/  dist/edge/  (unpacked folders)
 #          dist/*.zip                              (store-ready archives)
 #
@@ -26,7 +26,7 @@ Write-Host "Building version $Version ..."
 if (Test-Path $Dist) { Remove-Item -Recurse -Force $Dist }
 New-Item -ItemType Directory -Path $Dist | Out-Null
 
-$Sources = @("background", "content", "icons", "lib", "options", "popup", "shared", "_locales", "offscreen")
+$Sources = @("background", "content", "icons", "lib", "options", "popup", "shared", "_locales", "offscreen", "help")
 
 function Update-ManifestVersion($dir, $srcManifest) {
   Copy-Item (Join-Path $Root $srcManifest) (Join-Path $dir "manifest.json")

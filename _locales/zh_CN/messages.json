@@ -16,6 +16,7 @@
   "popupSaveShortcut": { "message": "保存" },
   "popupCopyShortcut": { "message": "复制" },
   "popupSettingsLink": { "message": "设置" },
+  "popupHelpLink": { "message": "帮助" },
   "popupSaveToFolder": { "message": "正在保存到文件夹..." },
   "popupCopyingToClipboard": { "message": "正在复制到剪贴板..." },
   "popupCopied": { "message": "已复制到剪贴板" },
