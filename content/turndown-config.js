@@ -38,11 +38,17 @@ turndownService.addRule('wechatEmoji', {
 });
 
 // Handle video embeds (Tencent/WeChat video iframes)
+// WeChat's mpvideo iframe uses `data-src` (a readtemplate player URL) and has
+// no `src` at all, so the address must be read from data-src / data-mpvid too.
 turndownService.addRule('wechatVideo', {
   filter: function (node) {
     if (node.nodeName === 'IFRAME') {
       const src = node.getAttribute('src') || '';
-      return src.includes('v.qq.com') || src.includes('video.weixin.qq.com');
+      const dataSrc = node.getAttribute('data-src') || '';
+      return src.includes('v.qq.com') || src.includes('video.weixin.qq.com') ||
+        dataSrc.includes('v.qq.com') || dataSrc.includes('video.weixin.qq.com') ||
+        dataSrc.includes('video_player_tmpl') || dataSrc.includes('action=mpvideo') ||
+        (node.classList && node.classList.contains('video_iframe'));
     }
     if (node.nodeName === 'VIDEO') return true;
     if (node.classList && node.classList.contains('video_iframe')) return true;
@@ -51,15 +57,26 @@ turndownService.addRule('wechatVideo', {
   replacement: function (content, node) {
     let src = '';
     if (node.nodeName === 'IFRAME') {
-      src = node.getAttribute('src') || '';
+      src = node.getAttribute('src') || node.getAttribute('data-src') || '';
     } else if (node.nodeName === 'VIDEO') {
-      src = node.getAttribute('src') || node.querySelector('source')?.getAttribute('src') || '';
+      src = node.getAttribute('src') || node.getAttribute('data-src') ||
+        (node.querySelector('source') && node.querySelector('source').getAttribute('src')) || '';
     }
-    const title = node.getAttribute('data-title') || node.getAttribute('title') || 'Video';
+    // Last resort: rebuild the WeChat player URL from the video id.
+    if (!src) {
+      const mpvid = node.getAttribute('data-mpvid') || node.getAttribute('data-vid');
+      if (mpvid) {
+        src = 'https://mp.weixin.qq.com/mp/readtemplate?t=pages/video_player_tmpl&action=mpvideo&auto=0&vid=' + encodeURIComponent(mpvid);
+      }
+    }
+    // New saves use a Chinese label; a real title (Chinese or English) is
+    // still appended, so old English titles keep working.
+    const rawTitle = node.getAttribute('data-title') || node.getAttribute('title') || '';
+    const label = rawTitle && rawTitle !== 'Video' ? '视频：' + rawTitle : '视频';
     if (src) {
-      return '\n\n> [VIDEO: ' + title + '](' + src + ')\n\n';
+      return '\n\n> [' + label + '](' + src + ')\n\n';
     }
-    return '\n\n> [VIDEO: ' + title + ']\n\n';
+    return '\n\n> [' + label + ']\n\n';
   }
 });
 
