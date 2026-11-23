@@ -111,6 +111,8 @@
       <ul>
         <li>流程：提取文章 → 下载全部图片 → 在你选的文件夹里新建一个文章目录并写入文件。</li>
         <li>生成的 Markdown 文件开头带一段 YAML frontmatter（文件头部的元数据区块），包含 <code>title</code>（标题）、<code>author</code>（作者）、<code>date</code>（发布日期）、<code>source</code>（原文网址）、<code>saved_at</code>（保存时间）五个字段。</li>
+        <li><code>saved_at</code> 与 <code>date</code> 都固定按<strong>北京时间（UTC+8）</strong>记录，并带 <code>+08:00</code> 后缀，例如 <code>2026-11-23 21:01:58+08:00</code>，不随设备所在时区变化。两个字段口径一致，同一篇文章在世界任何地方保存，写出的时间格式都相同。</li>
+        <li><code>saved_at</code> 是保存的那一刻；<code>date</code> 是文章的发布时间。微信页面给出中文日期（如 <code>2026年10月9日 08:00</code>）或横线格式，都会转成 <code>2026-10-09 08:00:00+08:00</code>；只有日期没有时刻的输入转成 <code>2026-10-09+08:00</code>，不会凭空补出时分秒；带时区的时间戳则先换算成北京时间。无法识别的原文原样保留。</li>
         <li>图片链接会被替换成相对路径，所以把整个文章目录一起拷走，图片仍然能显示。</li>
         <li>图片下载为并发 3 张、每张最多尝试 2 次、单次超时 15 秒。个别图片失败不会中断保存，结果里会显示「N 张失败」，失败的图片在 Markdown 中仍保留远程链接。</li>
         <li>成功时扩展图标会短暂显示绿色对勾。</li>
@@ -196,6 +198,9 @@
       <p class="faq-q">图片少了，或结果里显示「N 张失败」</p>
       <p class="faq-a">单张图片超时 15 秒、最多重试 2 次，微信图片服务器偶发拦截。重新保存一次通常能补齐；失败的图片在 Markdown 里仍保留远程链接。</p>
 
+      <p class="faq-q">文章里的视频保存成什么</p>
+      <p class="faq-a">保存为一行引用块链接，形如 <code>&gt; [视频](播放器地址)</code>，点链接可打开播放页；视频本体（MP4 文件）不下载。微信内置视频的地址藏在播放器链接里，新版已能正确读出。旧版本会把视频写成 <code>&gt; [VIDEO: Video]</code> 这样的空占位，若已保存到本地，可用项目里的 <code>scripts/fix-video-md.js</code> 修复：在项目根目录运行 <code>node .\scripts\fix-video-md.js "D:\我的文章\文章.md"</code> 预览，确认后加 <code>--apply</code> 写入（默认生成 .bak 备份，可重复运行）。脚本默认链接对应 2026-11-23 那篇文章，修其它文章需加 <code>--url &lt;播放器地址&gt;</code> 指定。</p>
+
       <p class="faq-q">设置页文件夹显示「需重新授权」</p>
       <p class="faq-a">浏览器重启或长时间未使用后，浏览器会收回写入权限，但文件夹本身没丢。点设置页的「重新授权」，或直接在弹窗里点「保存到文件夹」（会在那一刻请求一次授权），即可恢复，<strong>不用重新选择目录</strong>。恢复后弹窗文件夹名重新变绿。</p>
 
@@ -217,6 +222,8 @@
       <p class="faq-q">Firefox 里「选择文件夹」按钮是灰的</p>
       <p class="faq-a">正常现象。Firefox 不支持该接口，请用 zip 下载方式。</p>
 
+      <p class="faq-q">旧文件里的时间口径不统一，怎么批量修正？</p>
+      <p class="faq-a">旧版本把 saved_at 写成了不带时区标识的 UTC 时间，中间版本又改成跟随设备时区；date 则是微信原文的中文格式。可用项目里的 <code>scripts/fix-saved-at.js</code> 统一成北京时间（需先装 Node.js）：在项目根目录运行 <code>node .\scripts\fix-saved-at.js "D:\我的文章"</code> 预览，确认后加 <code>--apply</code> 实际写入。脚本固定按 UTC+8 换算，同时处理 frontmatter 里的 saved_at 与 date 两行，只有日期的 date 只补后缀不补时分秒，默认生成 .bak 备份，与设备时区无关，可重复运行。详见使用说明文档。</p>
     </section>
 
     <!-- 九 -->

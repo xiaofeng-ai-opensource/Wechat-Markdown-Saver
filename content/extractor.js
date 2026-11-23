@@ -41,18 +41,20 @@ function extractAuthor() {
 }
 
 function extractPublishDate() {
+  // All three WeChat date sources are normalized to a fixed Beijing format
+  // so date and saved_at use the same convention in the frontmatter.
   const el = document.querySelector('#publish_time');
   if (el && el.textContent.trim()) {
-    return el.textContent.trim();
+    return __WMS_TIME__.formatPublishDate(el.textContent.trim());
   }
   const metaDate = document.querySelector('meta[property="article:published_time"]');
   if (metaDate) {
     try {
-      return new Date(metaDate.content).toISOString().replace('T', ' ').substring(0, 19);
+      return __WMS_TIME__.formatPublishDate(metaDate.content);
     } catch (e) { /* fall through */ }
   }
   const timeEl = document.querySelector('.rich_media_meta_text time');
-  if (timeEl) return timeEl.textContent.trim();
+  if (timeEl) return __WMS_TIME__.formatPublishDate(timeEl.textContent.trim());
   return '';
 }
 

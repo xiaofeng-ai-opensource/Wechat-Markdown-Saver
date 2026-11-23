@@ -4,6 +4,7 @@
 
 importScripts('../shared/browser.js');
 importScripts('../shared/i18n.js');
+importScripts('../shared/time.js');
 importScripts('../shared/folder-permission.js');
 importScripts('../lib/jszip.min.js');
 
@@ -255,7 +256,7 @@ async function handleSaveToFolder(tabId, popupPort) {
   const safeTitle = sanitizeFilename(title) || 'wechat-article';
   const safeDirName = safeTitle + '_' + Date.now().toString(36);
 
-  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const now = __WMS_TIME__.formatSavedAt();
   const frontmatter = [
     '---',
     'title: "' + escapeYaml(title) + '"',
@@ -562,7 +563,7 @@ async function handleCopyToClipboard(tabId) {
   if (!article) return;
 
   const { title, author, publishDate, markdown, sourceUrl } = article;
-  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const now = __WMS_TIME__.formatSavedAt();
   const frontmatter = [
     '---',
     'title: "' + escapeYaml(title) + '"',
@@ -615,7 +616,7 @@ async function handleZipFallback(tabId, popupPort, cachedArticle, degradedInfo) 
     }
   });
 
-  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+  const now = __WMS_TIME__.formatSavedAt();
   const frontmatter = [
     '---',
     'title: "' + escapeYaml(title) + '"',

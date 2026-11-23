@@ -216,7 +216,7 @@ async function handleCopy() {
       setState('error', extractResult?.error || t('swExtractionFailed')); return;
     }
     const { title, author, publishDate, markdown, sourceUrl } = extractResult.payload;
-    const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+    const now = __WMS_TIME__.formatSavedAt();
     const esc = (s) => (s || '').replace(/\\/g, '\\\\').replace(/"/g, '\\"');
     const frontmatter = [
       '---', 'title: "' + esc(title) + '"', 'author: "' + esc(author) + '"',

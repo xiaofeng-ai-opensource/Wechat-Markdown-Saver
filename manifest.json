@@ -35,6 +35,7 @@
       "js": [
         "shared/browser.js",
         "shared/i18n.js",
+        "shared/time.js",
         "lib/turndown.min.js",
         "content/turndown-config.js",
         "content/extractor.js",
