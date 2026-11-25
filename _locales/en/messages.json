@@ -92,6 +92,7 @@
   "optionsReauthorizeBtn": { "message": "Re-authorize" },
   "optionsReauthSuccess": { "message": "Permission restored. You can save again." },
   "optionsReauthFailed": { "message": "Permission was not granted. Please try again." },
+  "optionsReauthTip": { "message": "In the browser dialog, choose \"Allow every visit\" so you will not be asked again." },
   "swReasonNoFolder": { "message": "No folder is configured." },
   "swReasonExpired": { "message": "Write permission has expired." },
   "swReasonDenied": { "message": "Folder access was denied." },

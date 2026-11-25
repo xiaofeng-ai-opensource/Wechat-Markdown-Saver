@@ -92,6 +92,7 @@
   "optionsReauthorizeBtn": { "message": "重新授权" },
   "optionsReauthSuccess": { "message": "权限已恢复，可以继续保存了。" },
   "optionsReauthFailed": { "message": "未取得授权，请重试。" },
+  "optionsReauthTip": { "message": "在浏览器弹窗中选择「每次访问都允许」，以后就不必重复授权。" },
   "swReasonNoFolder": { "message": "尚未设置保存文件夹。" },
   "swReasonExpired": { "message": "写入权限已失效。" },
   "swReasonDenied": { "message": "文件夹访问被拒绝。" },

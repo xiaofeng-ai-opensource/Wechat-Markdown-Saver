@@ -49,6 +49,7 @@ const folderPathEl = document.getElementById('folder-path');
 const folderHintEl = document.getElementById('folder-hint');
 const pickBtn = document.getElementById('pick-folder-btn');
 const reauthBtn = document.getElementById('reauth-folder-btn');
+const reauthTipEl = document.getElementById('reauth-tip');
 const clearBtn = document.getElementById('clear-folder-btn');
 const toastEl = document.getElementById('toast');
 
@@ -80,6 +81,8 @@ async function renderFolderStatus() {
     folderHintEl.textContent = t('optionsFolderReady');
     reauthBtn.hidden = true;
   }
+  // The permission reminder only makes sense when re-authorization is shown.
+  reauthTipEl.hidden = reauthBtn.hidden;
 }
 
 // --- Check File System Access API availability ---
