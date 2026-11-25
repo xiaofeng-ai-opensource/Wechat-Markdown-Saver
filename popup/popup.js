@@ -42,6 +42,14 @@ function enableAll() {
   urlSaveBtn.disabled = !urlInput.value.trim();
 }
 
+// v2.3.1: dedup-index failures travel inside the terminal result message, so
+// they survive later progress messages and never change the result's meaning.
+function withWarning(details, msg) {
+  return msg && msg.warning
+    ? details + '<div class="result-warning">' + msg.warning + '</div>'
+    : details;
+}
+
 function setState(state, data) {
   statusText.className = 'status-text';
   spinner.classList.remove('active');
@@ -70,6 +78,13 @@ function setState(state, data) {
       statusText.classList.add('error');
       resultDiv.className = 'result visible error';
       resultDiv.innerHTML = '<span class="result-icon">&#10007;</span> ' + data;
+      break;
+    case 'already-saved':
+      // Duplicate hit: an explicit stop, not a failure and not a fresh save.
+      statusText.textContent = t('popupAlreadySaved');
+      statusText.classList.add('idle');
+      resultDiv.className = 'result visible skipped';
+      resultDiv.innerHTML = '<span class="result-icon">&#10554;</span> ' + data;
       break;
     case 'degraded':
       // A write failed; a zip was downloaded instead. Never show "Done!".
@@ -152,10 +167,15 @@ async function startSave(tabId) {
       const details = msg.imageErrors
         ? t('popupSavedWithErrors', [msg.filename, String(msg.imageCount), String(msg.imageErrors)])
         : t('popupSaved', [msg.filename, String(msg.imageCount)]);
-      setState('success', details);
+      setState('success', withWarning(details, msg));
       port.disconnect();
     }
     if (msg.error) { setState('error', msg.error); port.disconnect(); }
+    if (msg.alreadySaved) {
+      setState('already-saved', withWarning(
+        t('popupAlreadySavedMsg', [msg.dirName || msg.title || '']), msg));
+      port.disconnect();
+    }
     // v2.3.0: folder write failed -> one combined degraded result (reason +
     // next action + the zip that was downloaded instead). Never "done".
     if (msg.degraded) {
@@ -298,18 +318,24 @@ urlSaveBtn.addEventListener('click', async () => {
     port = chrome.runtime.connect({ name: 'save-article' });
     port.onMessage.addListener(async (msg) => {
       if (msg.status) setState('working', msg.status);
-      if (msg.done || msg.error || msg.degraded) {
+      if (msg.done || msg.error || msg.degraded || msg.alreadySaved) {
         try { await chrome.tabs.remove(tab.id); } catch (e) {}
       }
       if (msg.done) {
         const details = msg.imageErrors
           ? t('popupSavedWithErrors', [msg.filename, String(msg.imageCount), String(msg.imageErrors)])
           : t('popupSaved', [msg.filename, String(msg.imageCount)]);
-        setState('success', details);
+        setState('success', withWarning(details, msg));
         port.disconnect();
         urlInput.value = ''; urlSaveBtn.disabled = true;
       }
       if (msg.error) { setState('error', msg.error); port.disconnect(); }
+      if (msg.alreadySaved) {
+        setState('already-saved', withWarning(
+          t('popupAlreadySavedMsg', [msg.dirName || msg.title || '']), msg));
+        port.disconnect();
+        urlInput.value = ''; urlSaveBtn.disabled = true;
+      }
       if (msg.degraded) {
         pendingDegraded = msg;
         const details = t('popupNotWritten', [msg.reason, msg.next])

@@ -190,9 +190,66 @@ async function handleWriteArticle(payload, sender) {
     }).catch(() => {});
   };
 
+  // ── Duplicate check (before any image download) ────────────────
+  // The index lives in the target folder and is only written after a
+  // successful save. `ensureIndex` backfills from existing article
+  // directories on first use, so articles saved by older versions count.
+  const S = globalThis.__WMS_SAVED_INDEX__;
+  let index = null;
+  let duplicate = null;
+  let indexWarning = false;
+  if (S && payload.sourceUrl) {
+    try {
+      sendProgress('swCheckingDuplicate');
+      index = await S.ensureIndex(dirHandle);
+      duplicate = S.lookup(index, payload.sourceUrl);
+    } catch (e) {
+      // A broken index must never block saving — degrade to "not tracked",
+      // but report it so the user knows dedup silently stopped working.
+      console.warn('Offscreen: saved-index unavailable:', e);
+      indexWarning = true;
+      index = null;
+      duplicate = null;
+    }
+  }
+
+  if (duplicate && !payload.overwriteExisting) {
+    return {
+      duplicate: true,
+      dirName: duplicate.dirName || null,
+      title: duplicate.title || null,
+      indexWarning: indexWarning
+    };
+  }
+
+  // Overwrite reuses ONLY the recorded directory name. The Markdown content
+  // and image relative paths were built from the CURRENT output structure and
+  // title, so reusing an older structure/title here would break image links.
+  // Per decision: other files already in the directory are left untouched.
+  let writePayload = payload;
+  if (duplicate && payload.overwriteExisting && duplicate.dirName) {
+    writePayload = Object.assign({}, payload, { safeDirName: duplicate.dirName });
+  }
+
   try {
-    const result = await writeArticle(dirHandle, payload, sendProgress);
-    return { success: true, ...result };
+    const result = await writeArticle(dirHandle, writePayload, sendProgress);
+    // Record only after the files are actually written.
+    if (index && payload.sourceUrl) {
+      try {
+        S.upsert(index, payload.sourceUrl, {
+          dirName: writePayload.safeDirName,
+          safeTitle: writePayload.safeTitle,
+          title: payload.title || '',
+          savedAt: payload.savedAt || null,
+          outputStructure: writePayload.outputStructure
+        });
+        await S.writeIndex(dirHandle, index);
+      } catch (e) {
+        console.warn('Offscreen: could not update saved-index:', e);
+        indexWarning = true;
+      }
+    }
+    return { success: true, ...result, dirName: writePayload.safeDirName, indexWarning: indexWarning };
   } catch (e) {
     console.error('Offscreen: write failed:', e);
     return { success: false, code: 'WRITE_FAILED', message: e.message || 'Failed to write files' };

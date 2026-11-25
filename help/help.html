@@ -9,9 +9,9 @@
 <div class="page">
 
   <header class="hero">
-    <div class="badge">微信 Markdown 保存助手 · 版本 2.3.0</div>
+    <div class="badge">微信 Markdown 保存助手 · 版本 2.3.1</div>
     <h1>使用说明</h1>
-    <p class="lead">本文按当前代码的实际行为编写；与 README 描述不一致的地方，在「九、已知偏差」里单独列出。支持 Chrome、Edge、Firefox。</p>
+    <p class="lead">本文按当前代码的实际行为编写；与 README 描述不一致的地方，在「十、已知偏差」里单独列出。支持 Chrome、Edge、Firefox。</p>
   </header>
 
   <nav class="toc">
@@ -24,9 +24,10 @@
       <li><a href="#s5">五、三种保存方式</a></li>
       <li><a href="#s6">六、设置项</a></li>
       <li><a href="#s7">七、输出目录长什么样</a></li>
-      <li><a href="#s8">八、常见问题</a></li>
-      <li><a href="#s9">九、已知偏差</a></li>
-      <li><a href="#s10">十、快捷键一览</a></li>
+      <li><a href="#s8">八、重复保存</a></li>
+      <li><a href="#s9">九、常见问题</a></li>
+      <li><a href="#s10">十、已知偏差</a></li>
+      <li><a href="#s11">十一、快捷键一览</a></li>
     </ul>
   </nav>
 
@@ -153,11 +154,12 @@
         <tbody>
           <tr><td>语言</td><td>English / 中文</td><td>实时切换界面文案。未手动设置时跟随浏览器语言，中文环境自动显示中文</td></tr>
           <tr><td>保存文件夹</td><td>选择文件夹 / 重新授权 / 清除</td><td>决定文章写到哪里。权限失效时出现「重新授权」按钮，不用重选目录；未设置时降级为 zip 下载</td></tr>
+          <tr><td>重复保存</td><td>跳过（默认） / 覆盖</td><td>同一篇文章已在该文件夹时，是跳过还是覆盖，见「八、重复保存」</td></tr>
           <tr><td>输出结构</td><td>简单 / Obsidian</td><td>决定文章目录的布局，见下一节</td></tr>
-          <tr><td>默认保存模式</td><td>保存到本地文件夹 / 复制到剪贴板 / 两者都做</td><td><strong>当前不生效</strong>，详见「九、已知偏差」</td></tr>
+          <tr><td>默认保存模式</td><td>保存到本地文件夹 / 复制到剪贴板 / 两者都做</td><td><strong>当前不生效</strong>，详见「十、已知偏差」</td></tr>
         </tbody>
       </table>
-      <p>快捷键不在这里修改，方法见「八、常见问题」。</p>
+      <p>快捷键不在这里修改，方法见「九、常见问题」。</p>
     </section>
 
     <!-- 七 -->
@@ -190,7 +192,22 @@
 
     <!-- 八 -->
     <section id="s8">
-      <h2>八、常见问题</h2>
+      <h2>八、重复保存</h2>
+      <p>保存到文件夹时，扩展会在文件夹根目录维护一个隐藏清单文件 <code>.wechat-md-saver.json</code>，记录哪些文章<strong>已经成功保存</strong>过。</p>
+      <ul>
+        <li><strong>判断依据</strong>：文章原链接，忽略网址中的追踪参数与符号差异。</li>
+        <li><strong>记录时机</strong>：只在文件真正写入成功后记录。写入失败而降级成 zip 的不记；复制、PDF、zip 下载也不记。</li>
+        <li><strong>首次使用</strong>：清单不存在时，会扫描文件夹里已有的文章目录，从 Markdown 开头的元信息里读出原链接补录，老版本保存过的文章也算数。</li>
+        <li><strong>跳过（默认）</strong>：命中重复时提示「已保存过 — 未重复写入」，不下载图片、不新建目录、不下载 zip；快捷键触发时显示绿色角标「已」。</li>
+        <li><strong>覆盖</strong>：沿用原来的文章目录名重新写入，按<strong>当前</strong>输出结构组织文件；目录里原有的其它文件不删除。</li>
+        <li><strong>读写异常</strong>：清单读写失败时<strong>不影响本次保存</strong>，结果里会显示「去重记录读写失败」提示，提醒你下次可能无法识别重复。</li>
+      </ul>
+      <div class="warn">边界：首次补录时，文章目录名末尾的 base36 时间戳由正则推断，若原文件名本身以同样字符组合结尾可能被截短；这只影响覆盖时复用的文件名，不影响判重。</div>
+    </section>
+
+    <!-- 九 -->
+    <section id="s9">
+      <h2>九、常见问题</h2>
 
       <p class="faq-q">点按钮没反应，或提示「不是微信公众号文章」</p>
       <p class="faq-a">扩展当前只认网址里含 <code>mp.weixin.qq.com/s/</code> 的短链。<code>mp.weixin.qq.com/s?__biz=...</code> 这类长链（旧式分享链接）会被判成非文章页，连按钮都会被禁用；请改用短链，或在微信里重新复制文章链接。刚安装完扩展时，也需要刷新已打开的文章页。</p>
@@ -227,18 +244,18 @@
     </section>
 
     <!-- 九 -->
-    <section id="s9">
-      <h2>九、已知偏差（按当前代码如实标注）</h2>
+    <section id="s10">
+      <h2>十、已知偏差（按当前代码如实标注）</h2>
       <div class="warn"><strong>1.「默认保存模式」设置当前不生效。</strong> 设置页会把选择写入本地存储，但弹窗按钮、快捷键和后台服务都没有读取这个值。无论选哪一项，点「保存到文件夹」仍只写文件夹，点「复制到剪贴板」仍只复制，不会自动变成「两者都做」。请直接点对应按钮或按对应快捷键。</div>
       <div class="warn"><strong>2. 设置页里 PDF 的说明与实际实现不符。</strong> 页面写的是「在打印优化页面中打开文章并触发保存为 PDF」，实际是调试器接口静默生成 PDF 并写入文件夹或下载，只有失败时才回退到打印对话框。</div>
       <div class="warn"><strong>3. zip 降级时 Markdown 文件名固定为 <code>article.md</code>。</strong> 即使选了 Obsidian 模式，压缩包里也不是「标题.md」；但图片目录仍按所选结构组织。</div>
       <div class="warn"><strong>4. 两套文案来源仍有少量历史差异</strong>（内置文案表与浏览器本地化文件）。2.3.0 新增的降级、重新授权相关文案已在两处同步；界面显示始终以内置文案表为准，功能不受影响。</div>
-      <div class="warn"><strong>5. 网址判定只认短链。</strong> 代码里有 8 处用「网址里是否包含 <code>mp.weixin.qq.com/s/</code>」来判断是不是文章页，长链（<code>/s?__biz=...</code>）因此会被误判为非文章，虽然内容脚本其实仍能抓取。应对办法见「八、常见问题」第一条。</div>
+      <div class="warn"><strong>5. 网址判定只认短链。</strong> 代码里有 8 处用「网址里是否包含 <code>mp.weixin.qq.com/s/</code>」来判断是不是文章页，长链（<code>/s?__biz=...</code>）因此会被误判为非文章，虽然内容脚本其实仍能抓取。应对办法见「九、常见问题」第一条。</div>
     </section>
 
     <!-- 十 -->
-    <section id="s10">
-      <h2>十、快捷键一览</h2>
+    <section id="s11">
+      <h2>十一、快捷键一览</h2>
       <table>
         <thead><tr><th>快捷键</th><th>动作</th></tr></thead>
         <tbody>
@@ -247,12 +264,12 @@
           <tr><td><kbd>Ctrl+Shift+P</kbd></td><td>保存为 PDF</td></tr>
         </tbody>
       </table>
-      <p>这三组是扩展建议的默认组合，可以在「八、常见问题」列出的浏览器快捷键管理页面自行修改或关闭。</p>
+      <p>这三组是扩展建议的默认组合，可以在「九、常见问题」列出的浏览器快捷键管理页面自行修改或关闭。</p>
     </section>
 
   </main>
 
-  <footer>微信 Markdown 保存助手 · 使用说明（版本 2.3.0）· 仓库内对应文档：docs/使用说明.md</footer>
+  <footer>微信 Markdown 保存助手 · 使用说明（版本 2.3.1）· 仓库内对应文档：docs/使用说明.md</footer>
 
 </div>
 </body>

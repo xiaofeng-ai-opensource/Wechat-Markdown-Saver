@@ -35,6 +35,20 @@
     </section>
 
     <section class="card">
+      <h2 data-i18n="optionsDuplicateSection">Duplicate Saves</h2>
+      <p data-i18n="optionsDuplicateDesc">When the same article is already in this folder, decide what happens next.</p>
+      <label class="radio-row">
+        <input type="radio" name="overwriteExisting" value="false" checked>
+        <span data-i18n="optionsDuplicateSkip">Skip — keep the existing copy (recommended)</span>
+      </label>
+      <label class="radio-row">
+        <input type="radio" name="overwriteExisting" value="true">
+        <span data-i18n="optionsDuplicateOverwrite">Overwrite — replace the existing copy</span>
+      </label>
+      <p class="hint" data-i18n="optionsDuplicateHint">Only articles saved successfully are tracked. Zip downloads are not tracked.</p>
+    </section>
+
+    <section class="card">
       <h2 data-i18n="optionsOutputSection">Output Structure</h2>
       <label class="radio-row">
         <input type="radio" name="outputStructure" value="simple" checked>

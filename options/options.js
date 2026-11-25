@@ -93,11 +93,14 @@ if (!hasFileSystemAccess) {
 
 // Init
 onI18nReady(async () => {
-  chrome.storage.local.get(['saveMode', 'outputStructure', 'uiLanguage'], (result) => {
+  chrome.storage.local.get(['saveMode', 'outputStructure', 'uiLanguage', 'overwriteExisting'], (result) => {
     if (result.saveMode) {
       const r = document.querySelector(`input[name="saveMode"][value="${result.saveMode}"]`);
       if (r) r.checked = true;
     }
+    const overwriteValue = result.overwriteExisting ? 'true' : 'false';
+    const overwriteRadio = document.querySelector(`input[name="overwriteExisting"][value="${overwriteValue}"]`);
+    if (overwriteRadio) overwriteRadio.checked = true;
     if (result.outputStructure) {
       const r = document.querySelector(`input[name="outputStructure"][value="${result.outputStructure}"]`);
       if (r) r.checked = true;
@@ -178,5 +181,13 @@ document.querySelectorAll('input[name="saveMode"]').forEach(radio => {
   radio.addEventListener('change', () => {
     chrome.storage.local.set({ saveMode: radio.value });
     showToast(t('optionsModeSaved'), true);
+  });
+});
+
+// Duplicate saves
+document.querySelectorAll('input[name="overwriteExisting"]').forEach(radio => {
+  radio.addEventListener('change', () => {
+    chrome.storage.local.set({ overwriteExisting: radio.value === 'true' });
+    showToast(t('optionsDuplicateSaved'), true);
   });
 });

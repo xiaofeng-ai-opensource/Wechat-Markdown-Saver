@@ -6,6 +6,7 @@ importScripts('../shared/browser.js');
 importScripts('../shared/i18n.js');
 importScripts('../shared/time.js');
 importScripts('../shared/folder-permission.js');
+importScripts('../shared/saved-index.js');
 importScripts('../lib/jszip.min.js');
 
 // ── Offscreen Document Management ──────────────────────────────────────
@@ -253,6 +254,7 @@ async function handleSaveToFolder(tabId, popupPort) {
 
   // 2. Prepare payload for offscreen document
   const outputStructure = await getOutputStructure();
+  const overwriteExisting = await getOverwriteExisting();
   const safeTitle = sanitizeFilename(title) || 'wechat-article';
   const safeDirName = safeTitle + '_' + Date.now().toString(36);
 
@@ -272,6 +274,10 @@ async function handleSaveToFolder(tabId, popupPort) {
   const payload = {
     safeDirName,
     safeTitle,
+    title,
+    sourceUrl,
+    savedAt: now,
+    overwriteExisting,
     markdown: mdContent,
     images,
     outputStructure
@@ -317,8 +323,20 @@ async function handleSaveToFolder(tabId, popupPort) {
 
     chrome.runtime.onMessage.removeListener(progressListener);
 
+    // Duplicate hit is a normal stop, not a write failure: no zip fallback,
+    // no badge error. The offscreen page returns this before any download.
+    if (result && result.duplicate) {
+      sendAlreadySaved(popupPort, result.dirName, result.title,
+        result.indexWarning ? t('popupIndexWarning') : null);
+      if (!popupPort) notifyBadge('已');
+      return;
+    }
+
     if (result && result.success) {
-      sendDone(popupPort, safeDirName, result.imageCount || 0, result.imageErrors || 0);
+      // On overwrite the offscreen page reused the recorded directory; report
+      // that actual name, not the freshly generated one that was never used.
+      sendDone(popupPort, result.dirName || safeDirName, result.imageCount || 0,
+        result.imageErrors || 0, result.indexWarning ? t('popupIndexWarning') : null);
       notifyBadge('');
       return;
     }
@@ -337,6 +355,34 @@ async function handleSaveToFolder(tabId, popupPort) {
     if (dirHandle) {
       const usable = await verifyHandleUsable(dirHandle);
       if (usable) {
+        // Dedup BEFORE downloading images, same as the offscreen path.
+        const S = globalThis.__WMS_SAVED_INDEX__;
+        let index = null;
+        let duplicate = null;
+        let indexWarning = false;
+        if (S && sourceUrl) {
+          try {
+            sendStatus(popupPort, t('swCheckingDuplicate'));
+            index = await S.ensureIndex(dirHandle);
+            duplicate = S.lookup(index, sourceUrl);
+          } catch (e) {
+            console.warn('Direct write: saved-index unavailable:', e);
+            indexWarning = true;
+            index = null;
+            duplicate = null;
+          }
+        }
+        if (duplicate && !overwriteExisting) {
+          sendAlreadySaved(popupPort, duplicate.dirName, duplicate.title,
+            indexWarning ? t('popupIndexWarning') : null);
+          if (!popupPort) notifyBadge('已');
+          return;
+        }
+        let writeDirName = safeDirName;
+        if (duplicate && overwriteExisting && duplicate.dirName) {
+          writeDirName = duplicate.dirName;
+        }
+
         sendStatus(popupPort, t('swDownloading', [String(images.length)]));
         const imageResults = await downloadAllImages(images, (done, total) => {
           sendStatus(popupPort, t('swDownloadingProgress', [String(done), String(total)]));
@@ -363,11 +409,27 @@ async function handleSaveToFolder(tabId, popupPort) {
 
         try {
           const writeResult = await attemptWrite(
-            dirHandle, safeDirName, safeTitle, finalMd, succeeded, outputStructure
+            dirHandle, writeDirName, safeTitle, finalMd, succeeded, outputStructure
           );
           if (writeResult.success) {
             _dirHandle = dirHandle;
-            sendDone(popupPort, safeDirName, succeeded.length, imageResults.length - succeeded.length);
+            if (index && sourceUrl) {
+              try {
+                S.upsert(index, sourceUrl, {
+                  dirName: writeDirName,
+                  safeTitle: safeTitle,
+                  title: title,
+                  savedAt: now,
+                  outputStructure: outputStructure
+                });
+                await S.writeIndex(dirHandle, index);
+              } catch (e) {
+                console.warn('Direct write: could not update saved-index:', e);
+                indexWarning = true;
+              }
+            }
+            sendDone(popupPort, writeDirName, succeeded.length, imageResults.length - succeeded.length,
+              indexWarning ? t('popupIndexWarning') : null);
             notifyBadge('');
             return;
           }
@@ -730,6 +792,14 @@ async function getOutputStructure() {
   });
 }
 
+async function getOverwriteExisting() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['overwriteExisting'], (result) => {
+      resolve(result.overwriteExisting === true);
+    });
+  });
+}
+
 // ── Popup Status Helpers ───────────────────────────────────────────────
 
 function sendStatus(port, msg) {
@@ -737,10 +807,24 @@ function sendStatus(port, msg) {
   try { port.postMessage({ status: msg }); } catch (e) {}
 }
 
-function sendDone(port, filename, imageCount, imageErrors) {
+function sendDone(port, filename, imageCount, imageErrors, warning) {
   if (!port) return;
   try {
-    port.postMessage({ done: true, filename: filename, imageCount: imageCount, imageErrors: imageErrors });
+    port.postMessage({
+      done: true, filename: filename, imageCount: imageCount,
+      imageErrors: imageErrors, warning: warning || null
+    });
+  } catch (e) {}
+}
+
+// v2.3.1: duplicate hit — a normal, explicit stop. Never {done:true}, so the
+// popup cannot report a fresh save; never {degraded:true}, so no zip was made.
+function sendAlreadySaved(port, dirName, title, warning) {
+  if (!port) return;
+  try {
+    port.postMessage({
+      alreadySaved: true, dirName: dirName || '', title: title || '', warning: warning || null
+    });
   } catch (e) {}
 }
 
@@ -774,7 +858,7 @@ function notifyBadge(text) {
   const B = __WMS_BROWSER__;
   if (text) {
     B.setBadgeText({ text: text });
-    B.setBadgeBackgroundColor({ color: text === '✓' ? '#07c160' : '#ff4d4f' });
+    B.setBadgeBackgroundColor({ color: (text === '✓' || text === '已') ? '#07c160' : '#ff4d4f' });
     setTimeout(() => B.setBadgeText({ text: '' }), 2000);
   } else {
     B.setBadgeText({ text: '✓' });
