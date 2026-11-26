@@ -162,7 +162,8 @@ kbd {
   cursor: pointer;
 }
 
-.radio-row input[type="radio"] {
+.radio-row input[type="radio"],
+.radio-row input[type="checkbox"] {
   accent-color: #07c160;
 }
 

@@ -36,6 +36,7 @@ SOURCES=(
   _locales
   offscreen
   help
+  index-tools
 )
 
 # ── Chrome ──────────────────────────────────────────────────────

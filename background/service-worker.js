@@ -8,6 +8,7 @@ importScripts('../shared/time.js');
 importScripts('../shared/folder-permission.js');
 importScripts('../shared/filename.js');
 importScripts('../shared/saved-index.js');
+importScripts('../shared/index-tools.js');
 importScripts('../lib/jszip.min.js');
 
 // ── Offscreen Document Management ──────────────────────────────────────
@@ -256,6 +257,7 @@ async function handleSaveToFolder(tabId, popupPort) {
   // 2. Prepare payload for offscreen document
   const outputStructure = await getOutputStructure();
   const overwriteExisting = await getOverwriteExisting();
+  const syncIndexTools = await getSyncIndexTools();
   const safeTitle = sanitizeFilename(title) || 'wechat-article';
   const safeDirName = safeTitle + '_' + Date.now().toString(36);
 
@@ -279,6 +281,7 @@ async function handleSaveToFolder(tabId, popupPort) {
     sourceUrl,
     savedAt: now,
     overwriteExisting,
+    syncIndexTools,
     markdown: mdContent,
     images,
     outputStructure
@@ -342,8 +345,11 @@ async function handleSaveToFolder(tabId, popupPort) {
     if (result && result.success) {
       // On overwrite the offscreen page reused the recorded directory; report
       // that actual name, not the freshly generated one that was never used.
+      const warnings = [];
+      if (result.indexWarning) warnings.push(t('popupIndexWarning'));
+      if (result.indexToolsWarning) warnings.push(t('popupIndexToolsWarning'));
       sendDone(popupPort, result.dirName || safeDirName, result.imageCount || 0,
-        result.imageErrors || 0, result.indexWarning ? t('popupIndexWarning') : null);
+        result.imageErrors || 0, warnings.length ? warnings.join(' ') : null);
       notifyBadge('');
       return;
     }
@@ -367,6 +373,7 @@ async function handleSaveToFolder(tabId, popupPort) {
         let index = null;
         let duplicate = null;
         let indexWarning = false;
+        let indexToolsWarning = false;
         if (S && sourceUrl) {
           try {
             sendStatus(popupPort, t('swCheckingDuplicate'));
@@ -435,8 +442,25 @@ async function handleSaveToFolder(tabId, popupPort) {
                 indexWarning = true;
               }
             }
+            // v2.3.4: deploy index tools after a successful write only.
+            // Never let a deployment failure undo the saved article.
+            if (syncIndexTools) {
+              const T = globalThis.__WMS_INDEX_TOOLS__;
+              if (T) {
+                try {
+                  const syncResult = await T.syncIndexTools(dirHandle);
+                  if (syncResult && syncResult.warning) indexToolsWarning = true;
+                } catch (e) {
+                  console.warn('Direct write: index-tools sync failed:', e);
+                  indexToolsWarning = true;
+                }
+              }
+            }
+            const warnings = [];
+            if (indexWarning) warnings.push(t('popupIndexWarning'));
+            if (indexToolsWarning) warnings.push(t('popupIndexToolsWarning'));
             sendDone(popupPort, writeDirName, succeeded.length, imageResults.length - succeeded.length,
-              indexWarning ? t('popupIndexWarning') : null);
+              warnings.length ? warnings.join(' ') : null);
             notifyBadge('');
             return;
           }
@@ -808,6 +832,15 @@ async function getOverwriteExisting() {
   return new Promise((resolve) => {
     chrome.storage.local.get(['overwriteExisting'], (result) => {
       resolve(result.overwriteExisting === true);
+    });
+  });
+}
+
+// v2.3.4: index-tool deployment is opt-out, default ON.
+async function getSyncIndexTools() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['syncIndexTools'], (result) => {
+      resolve(result.syncIndexTools !== false);
     });
   });
 }

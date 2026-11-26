@@ -32,7 +32,7 @@ if exist "%DIST%" rmdir /s /q "%DIST%"
 mkdir "%DIST%"
 
 REM Source folders to include
-set SOURCES=background content icons lib options popup shared _locales offscreen help
+set SOURCES=background content icons lib options popup shared _locales offscreen help index-tools
 
 REM ── Chrome ──────────────────────────────────────────────────────
 echo   [Chrome] packaging ...

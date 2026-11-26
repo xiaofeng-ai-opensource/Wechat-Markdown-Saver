@@ -249,7 +249,29 @@ async function handleWriteArticle(payload, sender) {
         indexWarning = true;
       }
     }
-    return { success: true, ...result, dirName: writePayload.safeDirName, indexWarning: indexWarning };
+    // v2.3.4: deploy index/cleanup tools after a successful save only.
+    // The article files are already on disk; a sync failure is a warning,
+    // never a reason to report the save as failed.
+    let indexToolsWarning = false;
+    if (payload.syncIndexTools !== false) {
+      const T = globalThis.__WMS_INDEX_TOOLS__;
+      if (T) {
+        try {
+          const syncResult = await T.syncIndexTools(dirHandle);
+          if (syncResult && syncResult.warning) indexToolsWarning = true;
+        } catch (e) {
+          console.warn('Offscreen: index-tools sync failed:', e);
+          indexToolsWarning = true;
+        }
+      }
+    }
+    return {
+      success: true,
+      ...result,
+      dirName: writePayload.safeDirName,
+      indexWarning: indexWarning,
+      indexToolsWarning: indexToolsWarning
+    };
   } catch (e) {
     var message = e && e.message ? e.message : 'Failed to write files';
     var name = e && e.name ? e.name : 'Error';

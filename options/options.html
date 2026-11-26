@@ -50,6 +50,16 @@
     </section>
 
     <section class="card">
+      <h2 data-i18n="optionsIndexToolsSection">Index Tools</h2>
+      <p data-i18n="optionsIndexToolsDesc">Keep the index/cleanup scripts in the save folder up to date whenever an article is saved.</p>
+      <label class="radio-row">
+        <input type="checkbox" id="sync-index-tools" checked>
+        <span data-i18n="optionsIndexToolsToggle">Sync index_tools on save (recommended)</span>
+      </label>
+      <p class="hint" data-i18n="optionsIndexToolsHint">Only affects "Save to Folder". Missing scripts are added and older ones are updated; the scripts themselves are run manually from index_tools/build_index.cmd.</p>
+    </section>
+
+    <section class="card">
       <h2 data-i18n="optionsOutputSection">Output Structure</h2>
       <label class="radio-row">
         <input type="radio" name="outputStructure" value="simple" checked>

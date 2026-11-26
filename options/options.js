@@ -51,6 +51,7 @@ const pickBtn = document.getElementById('pick-folder-btn');
 const reauthBtn = document.getElementById('reauth-folder-btn');
 const reauthTipEl = document.getElementById('reauth-tip');
 const clearBtn = document.getElementById('clear-folder-btn');
+const syncIndexToolsEl = document.getElementById('sync-index-tools');
 const toastEl = document.getElementById('toast');
 
 function showToast(msg, success) {
@@ -96,7 +97,7 @@ if (!hasFileSystemAccess) {
 
 // Init
 onI18nReady(async () => {
-  chrome.storage.local.get(['saveMode', 'outputStructure', 'uiLanguage', 'overwriteExisting'], (result) => {
+  chrome.storage.local.get(['saveMode', 'outputStructure', 'uiLanguage', 'overwriteExisting', 'syncIndexTools'], (result) => {
     if (result.saveMode) {
       const r = document.querySelector(`input[name="saveMode"][value="${result.saveMode}"]`);
       if (r) r.checked = true;
@@ -104,6 +105,7 @@ onI18nReady(async () => {
     const overwriteValue = result.overwriteExisting ? 'true' : 'false';
     const overwriteRadio = document.querySelector(`input[name="overwriteExisting"][value="${overwriteValue}"]`);
     if (overwriteRadio) overwriteRadio.checked = true;
+    syncIndexToolsEl.checked = result.syncIndexTools !== false;
     if (result.outputStructure) {
       const r = document.querySelector(`input[name="outputStructure"][value="${result.outputStructure}"]`);
       if (r) r.checked = true;
@@ -169,6 +171,12 @@ clearBtn.addEventListener('click', async () => {
   await clearDirectoryHandle();
   await renderFolderStatus();
   showToast(t('optionsFolderCleared'));
+});
+
+// Index tools deployment (save-to-folder only; default ON)
+syncIndexToolsEl.addEventListener('change', () => {
+  chrome.storage.local.set({ syncIndexTools: syncIndexToolsEl.checked });
+  showToast(t('optionsIndexToolsSaved'), true);
 });
 
 // Output structure
