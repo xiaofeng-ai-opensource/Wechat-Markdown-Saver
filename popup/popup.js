@@ -21,6 +21,38 @@ let cachedHandle = null;
 let folderState = 'unconfigured'; // unconfigured | needs_auth | ready
 let folderName = null;
 
+// Pre-check dedup: the index lives in the target folder, so it can only be
+// read in the popup when the handle is usable (state === 'ready'). Every
+// other case returns null = "not blocked", letting the existing backend
+// dedup remain the single source of truth as a fallback.
+//
+// Intentionally uses readIndex() (not ensureIndex): the popup must never
+// rebuild/rewrite the index — that is the backend's job. A missing or broken
+// index therefore reads as "not saved" here and the backend still decides.
+async function precheckDuplicate(rawUrl) {
+  if (!rawUrl || folderState !== 'ready' || !cachedHandle) return null;
+  const S = globalThis.__WMS_SAVED_INDEX__;
+  if (!S || typeof S.readIndex !== 'function') return null;
+  // "Overwrite existing" means duplicates are expected: never block them.
+  let overwrite = false;
+  try {
+    const cfg = await new Promise((resolve) => {
+      chrome.storage.local.get(['overwriteExisting'], resolve);
+    });
+    overwrite = !!(cfg && cfg.overwriteExisting);
+  } catch (e) { /* unreadable config: keep the safe default (block dup) */ }
+  if (overwrite) return null;
+  try {
+    const index = await S.readIndex(cachedHandle);
+    if (!index) return null;
+    return S.lookup(index, rawUrl); // record object on hit, null otherwise
+  } catch (e) {
+    // A broken index must never block saving — backend handles it with a
+    // visible warning (v2.3.1), so we simply skip the pre-check here.
+    return null;
+  }
+}
+
 // Apply i18n and placeholders once ready
 onI18nReady(() => {
   applyI18n();
@@ -134,7 +166,15 @@ function setState(state, data) {
 
 // --- Current page actions ---
 
-function triggerAction(actionType) {
+// A pre-check hit is a deliberate stop: show the same "already saved" result
+// as the backend, then keep the save entry points disabled (per decision).
+function showPrecheckDuplicate(dup) {
+  setState('already-saved', t('popupAlreadySavedMsg', [dup.dirName || dup.title || '']));
+  saveBtn.disabled = true;
+  urlSaveBtn.disabled = true;
+}
+
+async function triggerAction(actionType) {
   if (actionType === 'COPY') {
     handleCopy();
     return;
@@ -143,7 +183,15 @@ function triggerAction(actionType) {
     handlePdf();
     return;
   }
-  // SAVE — re-authorize in this click if needed (real user gesture), then
+  // SAVE — pre-check against the local index BEFORE extracting the article
+  // or downloading any image. Only when the folder is fully ready, so the
+  // grant path (needs_auth) keeps requestPermission() inside this click.
+  if (folderState === 'ready') {
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const dup = await precheckDuplicate(tab && tab.url);
+    if (dup) { showPrecheckDuplicate(dup); return; }
+  }
+  // Re-authorize in this click if needed (real user gesture), then
   // proceed with the normal background write. The folder is never re-picked.
   startSave(null);
 }
@@ -307,6 +355,12 @@ urlInput.addEventListener('keydown', (e) => {
 urlSaveBtn.addEventListener('click', async () => {
   const url = urlInput.value.trim();
   if (!url || !url.includes('mp.weixin.qq.com/s/')) return;
+  // Pre-check BEFORE opening a hidden tab. Only when the folder is ready, so
+  // a needs_auth grant still happens inside this click (v2.3.0 constraint).
+  if (folderState === 'ready') {
+    const dup = await precheckDuplicate(url);
+    if (dup) { urlInput.value = ''; showPrecheckDuplicate(dup); return; }
+  }
   setState('working', t('swOpeningArticle'));
   urlSaveBtn.disabled = true;
 
