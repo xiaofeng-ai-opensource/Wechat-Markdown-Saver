@@ -242,7 +242,7 @@ async function handleWriteArticle(payload, sender) {
           title: payload.title || '',
           savedAt: payload.savedAt || null,
           outputStructure: writePayload.outputStructure
-        });
+        }, payload.markdown);
         await S.writeIndex(dirHandle, index);
       } catch (e) {
         console.warn('Offscreen: could not update saved-index:', e);

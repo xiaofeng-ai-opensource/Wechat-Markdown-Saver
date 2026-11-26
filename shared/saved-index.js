@@ -42,13 +42,20 @@
   }
 
   // Add or refresh a record. Mutates and returns the index entry.
-  function upsert(index, url, meta) {
+  // v2.3.2: `author` is always derived from the Markdown frontmatter passed
+  // by the caller — never accepted from the meta object — so both write
+  // paths store the same value. Missing author is stored as ''.
+  function upsert(index, url, meta, markdown) {
     const key = normalizeUrl(url);
     if (!key) return null;
     if (!index.articles) index.articles = {};
     const prev = index.articles[key] || {};
-    index.articles[key] = Object.assign({}, prev, meta || {});
-    return index.articles[key];
+    const record = Object.assign({}, prev, meta || {});
+    const md = typeof markdown === 'string' ? markdown : (meta && meta.markdown);
+    record.author = extractFrontmatterField(md, 'author') || '';
+    delete record.markdown;
+    index.articles[key] = record;
+    return record;
   }
 
   // Read a frontmatter field from the leading --- ... --- block only.
@@ -130,6 +137,7 @@
         const key = normalizeUrl(source);
         if (!key) continue;
         const title = extractFrontmatterField(md, 'title') || '';
+        const author = extractFrontmatterField(md, 'author') || '';
         const savedAt = extractFrontmatterField(md, 'saved_at') || null;
         // dirName carries a base36 timestamp suffix; recover the safe title
         // that produced it so an overwrite can target the same Markdown file.
@@ -140,6 +148,7 @@
           dirName: name,
           safeTitle: safeTitle,
           title: title,
+          author: author,
           savedAt: savedAt,
           outputStructure: mdName === 'article.md' ? 'simple' : 'obsidian'
         };
@@ -148,10 +157,37 @@
     return index;
   }
 
+  // v2.3.2: indexes written by older versions have no `author` field.
+  // Scan the article directories once to fill it in; an empty string means
+  // the Markdown frontmatter had no author. Once every record has a string
+  // author this is a no-op, so the scan is genuinely one-time. Any failure
+  // is swallowed: missing author metadata must never block saving.
+  async function backfillAuthors(dirHandle, index) {
+    if (!index || !index.articles) return;
+    const pending = Object.keys(index.articles).filter(function (key) {
+      const rec = index.articles[key];
+      return rec && typeof rec.author !== 'string';
+    });
+    if (!pending.length) return;
+    const rebuilt = await buildIndexFromDirectory(dirHandle);
+    pending.forEach(function (key) {
+      const fresh = rebuilt.articles[key];
+      index.articles[key].author = (fresh && fresh.author) || '';
+    });
+    await writeIndex(dirHandle, index);
+  }
+
   // Read the index, or create it on first use by scanning existing articles.
   async function ensureIndex(dirHandle) {
     const existing = await readIndex(dirHandle);
-    if (existing) return existing;
+    if (existing) {
+      try {
+        await backfillAuthors(dirHandle, existing);
+      } catch (e) {
+        // Non-blocking: author is metadata, not part of the dedup key.
+      }
+      return existing;
+    }
     const built = await buildIndexFromDirectory(dirHandle);
     await writeIndex(dirHandle, built);
     return built;
@@ -167,6 +203,7 @@
     extractFrontmatterField: extractFrontmatterField,
     readIndex: readIndex,
     writeIndex: writeIndex,
+    backfillAuthors: backfillAuthors,
     buildIndexFromDirectory: buildIndexFromDirectory,
     ensureIndex: ensureIndex
   };

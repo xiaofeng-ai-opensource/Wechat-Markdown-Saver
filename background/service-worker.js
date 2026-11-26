@@ -421,7 +421,7 @@ async function handleSaveToFolder(tabId, popupPort) {
                   title: title,
                   savedAt: now,
                   outputStructure: outputStructure
-                });
+                }, finalMd);
                 await S.writeIndex(dirHandle, index);
               } catch (e) {
                 console.warn('Direct write: could not update saved-index:', e);

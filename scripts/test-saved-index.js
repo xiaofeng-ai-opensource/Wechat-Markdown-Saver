@@ -131,10 +131,32 @@ check('frontmatter 字段只从开头块提取', function () {
   assert.strictEqual(S.extractFrontmatterField('no frontmatter\nsource: x', 'source'), null);
 });
 
+check('author 只从 frontmatter 提取，meta 里伪造的 author 被忽略', function () {
+  const index = S.emptyIndex();
+  const md = [
+    '---',
+    'title: "测试"',
+    'author: "公众号甲"',
+    'source: https://mp.weixin.qq.com/s/AUTHOR',
+    '---',
+    'body'
+  ].join('\n');
+  S.upsert(index, 'https://mp.weixin.qq.com/s/AUTHOR', { title: '测试', author: '伪造值' }, md);
+  assert.strictEqual(S.lookup(index, 'https://mp.weixin.qq.com/s/AUTHOR').author, '公众号甲');
+});
+
+check('frontmatter 无 author 时写空字符串，且不把 markdown 落进清单', function () {
+  const index = S.emptyIndex();
+  const md = '---\ntitle: "测试"\n---\nbody';
+  const rec = S.upsert(index, 'https://mp.weixin.qq.com/s/NOAUTHOR', { markdown: md });
+  assert.strictEqual(rec.author, '');
+  assert.strictEqual('markdown' in rec, false);
+});
+
 (async function run() {
   await checkAsync('首次使用：从已有文章目录补录，只收有 source 的', async function () {
     const dir = makeDirHandleWithWrite({
-      'A_abc123/article.md': '---\ntitle: "A"\nsource: https://mp.weixin.qq.com/s/AAA\n---\nbody',
+      'A_abc123/article.md': '---\ntitle: "A"\nauthor: "公众号甲"\nsource: https://mp.weixin.qq.com/s/AAA\n---\nbody',
       'B_def456/article.md': '---\ntitle: "B"\nsource: https://mp.weixin.qq.com/s/BBB\n---\nbody',
       'C_ghi789/article.md': '---\ntitle: "C"\n---\nbody',
       'notes.txt': 'unrelated'
@@ -143,6 +165,8 @@ check('frontmatter 字段只从开头块提取', function () {
     assert.strictEqual(Object.keys(built.articles).length, 2);
     assert.ok(S.lookup(built, 'https://mp.weixin.qq.com/s/AAA?from=share'));
     assert.strictEqual(S.lookup(built, 'https://mp.weixin.qq.com/s/CCC'), null);
+    assert.strictEqual(S.lookup(built, 'https://mp.weixin.qq.com/s/AAA').author, '公众号甲');
+    assert.strictEqual(S.lookup(built, 'https://mp.weixin.qq.com/s/BBB').author, '');
   });
 
   await checkAsync('清单读写：ensureIndex 首次建清单，二次读回', async function () {
@@ -172,6 +196,31 @@ check('frontmatter 字段只从开头块提取', function () {
     assert.ok(rec);
     assert.strictEqual(rec.dirName, 'NEW_xyz');
     assert.strictEqual(rec.safeTitle, 'NEW');
+  });
+
+  await checkAsync('已有清单一次性补录 author，二次读取不再扫描', async function () {
+    const dir = makeDirHandleWithWrite({
+      'A_abc123/article.md': '---\ntitle: "A"\nauthor: "公众号甲"\nsource: https://mp.weixin.qq.com/s/AAA\n---\nbody',
+      'B_def456/article.md': '---\ntitle: "B"\nsource: https://mp.weixin.qq.com/s/BBB\n---\nbody'
+    });
+    // Simulate an index written by v2.3.1: no author field on any record.
+    dir._store[S.INDEX_FILE] = JSON.stringify({
+      version: 1,
+      articles: {
+        'https://mp.weixin.qq.com/s/AAA': { dirName: 'A_abc123', safeTitle: 'A', title: 'A' },
+        'https://mp.weixin.qq.com/s/BBB': { dirName: 'B_def456', safeTitle: 'B', title: 'B' }
+      }
+    }, null, 2);
+    const first = await S.ensureIndex(dir);
+    assert.strictEqual(S.lookup(first, 'https://mp.weixin.qq.com/s/AAA').author, '公众号甲');
+    assert.strictEqual(S.lookup(first, 'https://mp.weixin.qq.com/s/BBB').author, '');
+    const saved = JSON.parse(dir._store[S.INDEX_FILE]);
+    assert.strictEqual(saved.articles['https://mp.weixin.qq.com/s/AAA'].author, '公众号甲');
+    // Change the source Markdown: the second read must NOT re-scan.
+    dir._store['A_abc123/article.md'] =
+      dir._store['A_abc123/article.md'].replace('公众号甲', '公众号乙');
+    const second = await S.ensureIndex(dir);
+    assert.strictEqual(S.lookup(second, 'https://mp.weixin.qq.com/s/AAA').author, '公众号甲');
   });
 
   await checkAsync('清单损坏时按不存在处理，不影响保存', async function () {
