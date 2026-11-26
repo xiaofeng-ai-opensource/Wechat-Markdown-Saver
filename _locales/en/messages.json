@@ -85,6 +85,7 @@
   "popupNotWritten": { "message": "Not saved to your folder: $1. $2", "placeholders": { "reason": { "content": "$1" }, "next": { "content": "$2" } } },
   "popupZipDowngraded": { "message": "Zip downloaded instead ($1, $2 images). Folder was NOT written.", "placeholders": { "filename": { "content": "$1" }, "count": { "content": "$2" } } },
   "popupResultAction": { "message": "Re-authorize / Retry" },
+  "popupTechnicalDetail": { "message": "Technical detail: " },
   "popupFolderNeedsAuth": { "message": "needs re-authorization" },
   "popupAuthDeniedHint": { "message": "Folder access was denied. Open Settings to restore access." },
   "popupAuthFailedHint": { "message": "Could not get folder permission. Open Settings to restore access." },

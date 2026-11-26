@@ -6,6 +6,7 @@ importScripts('../shared/browser.js');
 importScripts('../shared/i18n.js');
 importScripts('../shared/time.js');
 importScripts('../shared/folder-permission.js');
+importScripts('../shared/filename.js');
 importScripts('../shared/saved-index.js');
 importScripts('../lib/jszip.min.js');
 
@@ -314,10 +315,16 @@ async function handleSaveToFolder(tabId, popupPort) {
             payload: payload
           });
         } catch (e2) {
-          result = { success: false, code: 'COMMUNICATION_ERROR', message: e2.message };
+          result = {
+            success: false, code: 'COMMUNICATION_ERROR', message: e2.message,
+            detail: 'Error: ' + (e2.message || 'Offscreen communication failed')
+          };
         }
       } else {
-        result = { success: false, code: 'COMMUNICATION_ERROR', message: e.message };
+        result = {
+          success: false, code: 'COMMUNICATION_ERROR', message: e.message,
+          detail: 'Error: ' + (e.message || 'Offscreen document unavailable')
+        };
       }
     }
 
@@ -474,10 +481,15 @@ async function handleSaveFailure(popupPort, articleCtx, result) {
     COMMUNICATION_ERROR: 'swNextRetry'
   };
 
+  // v2.3.3: surface a short technical cause in the popup. Keep it bounded so
+  // a long browser message cannot blow up the small result area.
+  const rawDetail = result.detail
+    || (result.message ? [result.errorName || 'Error', result.message].join(': ') : null);
   const degradedInfo = {
     code,
     reason: t(REASON_KEYS[code] || 'swReasonWriteError'),
-    next: t(NEXT_KEYS[code] || 'swNextRetry')
+    next: t(NEXT_KEYS[code] || 'swNextRetry'),
+    detail: rawDetail ? String(rawDetail).slice(0, 300) : null
   };
   if (!popupPort) {
     // No UI channel (keyboard shortcut): badge + open settings.
@@ -847,7 +859,8 @@ function sendDegraded(port, info) {
       reason: info.reason,
       next: info.next,
       filename: info.filename,
-      imageCount: info.imageCount
+      imageCount: info.imageCount,
+      detail: info.detail || null
     });
   } catch (e) {}
 }
@@ -870,11 +883,7 @@ function notifyBadge(text) {
 // ── Utilities ───────────────────────────────────────────────────────────
 
 function sanitizeFilename(name) {
-  return name
-    .replace(/[\/\\:*?"<>|]/g, '-')
-    .replace(/\s+/g, '_')
-    .substring(0, 100)
-    .trim() || 'wechat-article';
+  return globalThis.__WMS_FILENAME__.sanitize(name, 100);
 }
 
 function escapeYaml(str) {

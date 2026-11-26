@@ -85,6 +85,7 @@
   "popupNotWritten": { "message": "未写入你选择的文件夹：$1。$2", "placeholders": { "reason": { "content": "$1" }, "next": { "content": "$2" } } },
   "popupZipDowngraded": { "message": "已改为下载 zip（$1，$2 张图片），原文件夹未写入。", "placeholders": { "filename": { "content": "$1" }, "count": { "content": "$2" } } },
   "popupResultAction": { "message": "重新授权 / 重试" },
+  "popupTechnicalDetail": { "message": "技术详情：" },
   "popupFolderNeedsAuth": { "message": "需重新授权" },
   "popupAuthDeniedHint": { "message": "文件夹访问被拒绝，请到设置页恢复授权。" },
   "popupAuthFailedHint": { "message": "未能取得文件夹权限，请到设置页恢复授权。" },

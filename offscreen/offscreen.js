@@ -251,8 +251,16 @@ async function handleWriteArticle(payload, sender) {
     }
     return { success: true, ...result, dirName: writePayload.safeDirName, indexWarning: indexWarning };
   } catch (e) {
+    var message = e && e.message ? e.message : 'Failed to write files';
+    var name = e && e.name ? e.name : 'Error';
     console.error('Offscreen: write failed:', e);
-    return { success: false, code: 'WRITE_FAILED', message: e.message || 'Failed to write files' };
+    return {
+      success: false,
+      code: 'WRITE_FAILED',
+      message: message,
+      errorName: name,
+      detail: name + ': ' + message
+    };
   }
 }
 

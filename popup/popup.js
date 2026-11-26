@@ -50,6 +50,24 @@ function withWarning(details, msg) {
     : details;
 }
 
+// v2.3.3: a short technical cause travels with degraded results so users can
+// see why a write failed without opening the extension console.
+function escapeHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function withDetail(details, msg) {
+  return msg && msg.detail
+    ? details + '<div class="result-detail">' + t('popupTechnicalDetail')
+      + escapeHtml(msg.detail) + '</div>'
+    : details;
+}
+
 function setState(state, data) {
   statusText.className = 'status-text';
   spinner.classList.remove('active');
@@ -182,7 +200,7 @@ async function startSave(tabId) {
       pendingDegraded = msg;
       const details = t('popupNotWritten', [msg.reason, msg.next])
         + ' ' + t('popupZipDowngraded', [msg.filename, String(msg.imageCount)]);
-      setState('degraded', details);
+      setState('degraded', withWarning(withDetail(details, msg), msg));
       port.disconnect();
     }
   });
@@ -340,7 +358,7 @@ urlSaveBtn.addEventListener('click', async () => {
         pendingDegraded = msg;
         const details = t('popupNotWritten', [msg.reason, msg.next])
           + ' ' + t('popupZipDowngraded', [msg.filename, String(msg.imageCount)]);
-        setState('degraded', details);
+        setState('degraded', withWarning(withDetail(details, msg), msg));
         port.disconnect();
         urlInput.value = ''; urlSaveBtn.disabled = true;
       }
